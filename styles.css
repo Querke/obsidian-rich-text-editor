@@ -602,7 +602,7 @@ blockquote {
 	opacity: 1 !important;
 }
 
-._iconButton_1e2ox_457 {
+._tableToolsColumn_1e2ox_820 > ._iconButton_1e2ox_457 {
 	border: 0;
 	background-color: transparent;
 	font-size: inherit;
@@ -627,6 +627,7 @@ blockquote {
 	margin: 0 !important;
 	padding: 0 !important;
 	line-height: 0 !important;
+	cursor: pointer;
 }
 
 ._iconButton_1e2ox_457 svg {
