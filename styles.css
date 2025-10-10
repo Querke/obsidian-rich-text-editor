@@ -1,303 +1,14 @@
 /* ---------------------------------------------------------------------------- */
 
-:root,
-.light,
-.light-theme {
-	--blue-1: #fbfdff;
-	--blue-2: #f4faff;
-	--blue-3: #e6f4fe;
-	--blue-4: #d5efff;
-	--blue-5: #c2e5ff;
-	--blue-6: #acd8fc;
-	--blue-7: #8ec8f6;
-	--blue-8: #5eb1ef;
-	--blue-9: #0090ff;
-	--blue-10: #0588f0;
-	--blue-11: #0d74ce;
-	--blue-12: #113264;
-}
+blockquote {
+	/* 1. Define the vertical line: width, style, and color */
+	border-left: 2px solid var(--interactive-accent);
 
-@supports (color: color(display-p3 1 1 1)) {
-	@media (color-gamut: p3) {
-		:root,
-		.light,
-		.light-theme {
-			--blue-1: color(display-p3 0.986 0.992 0.999);
-			--blue-2: color(display-p3 0.96 0.979 0.998);
-			--blue-3: color(display-p3 0.912 0.956 0.991);
-			--blue-4: color(display-p3 0.853 0.932 1);
-			--blue-5: color(display-p3 0.788 0.894 0.998);
-			--blue-6: color(display-p3 0.709 0.843 0.976);
-			--blue-7: color(display-p3 0.606 0.777 0.947);
-			--blue-8: color(display-p3 0.451 0.688 0.917);
-			--blue-9: color(display-p3 0.247 0.556 0.969);
-			--blue-10: color(display-p3 0.234 0.523 0.912);
-			--blue-11: color(display-p3 0.15 0.44 0.84);
-			--blue-12: color(display-p3 0.102 0.193 0.379);
-		}
-	}
-}
+	/* 2. Add space between the line and the quoted text */
+	padding-left: 1rem;
 
-.dark,
-.dark-theme {
-	--blue-1: #0d1520;
-	--blue-2: #111927;
-	--blue-3: #0d2847;
-	--blue-4: #003362;
-	--blue-5: #004074;
-	--blue-6: #104d87;
-	--blue-7: #205d9e;
-	--blue-8: #2870bd;
-	--blue-9: #0090ff;
-	--blue-10: #3b9eff;
-	--blue-11: #70b8ff;
-	--blue-12: #c2e6ff;
-}
-
-@supports (color: color(display-p3 1 1 1)) {
-	@media (color-gamut: p3) {
-		.dark,
-		.dark-theme {
-			--blue-1: color(display-p3 0.057 0.081 0.122);
-			--blue-2: color(display-p3 0.072 0.098 0.147);
-			--blue-3: color(display-p3 0.078 0.154 0.27);
-			--blue-4: color(display-p3 0.033 0.197 0.37);
-			--blue-5: color(display-p3 0.08 0.245 0.441);
-			--blue-6: color(display-p3 0.14 0.298 0.511);
-			--blue-7: color(display-p3 0.195 0.361 0.6);
-			--blue-8: color(display-p3 0.239 0.434 0.72);
-			--blue-9: color(display-p3 0.247 0.556 0.969);
-			--blue-10: color(display-p3 0.344 0.612 0.973);
-			--blue-11: color(display-p3 0.49 0.72 1);
-			--blue-12: color(display-p3 0.788 0.898 0.99);
-		}
-	}
-}
-
-:root,
-.light,
-.light-theme {
-	--slate-1: #fcfcfd;
-	--slate-2: #f9f9fb;
-	--slate-3: #f0f0f3;
-	--slate-4: #e8e8ec;
-	--slate-5: #e0e1e6;
-	--slate-6: #d9d9e0;
-	--slate-7: #cdced6;
-	--slate-8: #b9bbc6;
-	--slate-9: #8b8d98;
-	--slate-10: #80838d;
-	--slate-11: #60646c;
-	--slate-12: #1c2024;
-}
-
-@supports (color: color(display-p3 1 1 1)) {
-	@media (color-gamut: p3) {
-		:root,
-		.light,
-		.light-theme {
-			--slate-1: color(display-p3 0.988 0.988 0.992);
-			--slate-2: color(display-p3 0.976 0.976 0.984);
-			--slate-3: color(display-p3 0.94 0.941 0.953);
-			--slate-4: color(display-p3 0.908 0.909 0.925);
-			--slate-5: color(display-p3 0.88 0.881 0.901);
-			--slate-6: color(display-p3 0.85 0.852 0.876);
-			--slate-7: color(display-p3 0.805 0.808 0.838);
-			--slate-8: color(display-p3 0.727 0.733 0.773);
-			--slate-9: color(display-p3 0.547 0.553 0.592);
-			--slate-10: color(display-p3 0.503 0.512 0.549);
-			--slate-11: color(display-p3 0.379 0.392 0.421);
-			--slate-12: color(display-p3 0.113 0.125 0.14);
-		}
-	}
-}
-
-.dark,
-.dark-theme {
-	--slate-1: #111113;
-	--slate-2: #18191b;
-	--slate-3: #212225;
-	--slate-4: #272a2d;
-	--slate-5: #2e3135;
-	--slate-6: #363a3f;
-	--slate-7: #43484e;
-	--slate-8: #5a6169;
-	--slate-9: #696e77;
-	--slate-10: #777b84;
-	--slate-11: #b0b4ba;
-	--slate-12: #edeef0;
-}
-
-@supports (color: color(display-p3 1 1 1)) {
-	@media (color-gamut: p3) {
-		.dark,
-		.dark-theme {
-			--slate-1: color(display-p3 0.067 0.067 0.074);
-			--slate-2: color(display-p3 0.095 0.098 0.105);
-			--slate-3: color(display-p3 0.13 0.135 0.145);
-			--slate-4: color(display-p3 0.156 0.163 0.176);
-			--slate-5: color(display-p3 0.183 0.191 0.206);
-			--slate-6: color(display-p3 0.215 0.226 0.244);
-			--slate-7: color(display-p3 0.265 0.28 0.302);
-			--slate-8: color(display-p3 0.357 0.381 0.409);
-			--slate-9: color(display-p3 0.415 0.431 0.463);
-			--slate-10: color(display-p3 0.469 0.483 0.514);
-			--slate-11: color(display-p3 0.692 0.704 0.728);
-			--slate-12: color(display-p3 0.93 0.933 0.94);
-		}
-	}
-}
-
-:root,
-.light,
-.light-theme {
-	--grass-1: #fbfefb;
-	--grass-2: #f5fbf5;
-	--grass-3: #e9f6e9;
-	--grass-4: #daf1db;
-	--grass-5: #c9e8ca;
-	--grass-6: #b2ddb5;
-	--grass-7: #94ce9a;
-	--grass-8: #65ba74;
-	--grass-9: #46a758;
-	--grass-10: #3e9b4f;
-	--grass-11: #2a7e3b;
-	--grass-12: #203c25;
-}
-
-@supports (color: color(display-p3 1 1 1)) {
-	@media (color-gamut: p3) {
-		:root,
-		.light,
-		.light-theme {
-			--grass-1: color(display-p3 0.986 0.996 0.985);
-			--grass-2: color(display-p3 0.966 0.983 0.964);
-			--grass-3: color(display-p3 0.923 0.965 0.917);
-			--grass-4: color(display-p3 0.872 0.94 0.865);
-			--grass-5: color(display-p3 0.811 0.908 0.802);
-			--grass-6: color(display-p3 0.733 0.864 0.724);
-			--grass-7: color(display-p3 0.628 0.803 0.622);
-			--grass-8: color(display-p3 0.477 0.72 0.482);
-			--grass-9: color(display-p3 0.38 0.647 0.378);
-			--grass-10: color(display-p3 0.344 0.598 0.342);
-			--grass-11: color(display-p3 0.263 0.488 0.261);
-			--grass-12: color(display-p3 0.151 0.233 0.153);
-		}
-	}
-}
-
-:root,
-.light,
-.light-theme {
-	--cyan-1: #fafdfe;
-	--cyan-2: #f2fafb;
-	--cyan-3: #def7f9;
-	--cyan-4: #caf1f6;
-	--cyan-5: #b5e9f0;
-	--cyan-6: #9ddde7;
-	--cyan-7: #7dcedc;
-	--cyan-8: #3db9cf;
-	--cyan-9: #00a2c7;
-	--cyan-10: #0797b9;
-	--cyan-11: #107d98;
-	--cyan-12: #0d3c48;
-}
-
-@supports (color: color(display-p3 1 1 1)) {
-	@media (color-gamut: p3) {
-		:root,
-		.light,
-		.light-theme {
-			--cyan-1: color(display-p3 0.982 0.992 0.996);
-			--cyan-2: color(display-p3 0.955 0.981 0.984);
-			--cyan-3: color(display-p3 0.888 0.965 0.975);
-			--cyan-4: color(display-p3 0.821 0.941 0.959);
-			--cyan-5: color(display-p3 0.751 0.907 0.935);
-			--cyan-6: color(display-p3 0.671 0.862 0.9);
-			--cyan-7: color(display-p3 0.564 0.8 0.854);
-			--cyan-8: color(display-p3 0.388 0.715 0.798);
-			--cyan-9: color(display-p3 0.282 0.627 0.765);
-			--cyan-10: color(display-p3 0.264 0.583 0.71);
-			--cyan-11: color(display-p3 0.08 0.48 0.63);
-			--cyan-12: color(display-p3 0.108 0.232 0.277);
-		}
-	}
-}
-
-:root,
-.light,
-.light-theme {
-	--amber-1: #fefdfb;
-	--amber-2: #fefbe9;
-	--amber-3: #fff7c2;
-	--amber-4: #ffee9c;
-	--amber-5: #fbe577;
-	--amber-6: #f3d673;
-	--amber-7: #e9c162;
-	--amber-8: #e2a336;
-	--amber-9: #ffc53d;
-	--amber-10: #ffba18;
-	--amber-11: #ab6400;
-	--amber-12: #4f3422;
-}
-
-@supports (color: color(display-p3 1 1 1)) {
-	@media (color-gamut: p3) {
-		:root,
-		.light,
-		.light-theme {
-			--amber-1: color(display-p3 0.995 0.992 0.985);
-			--amber-2: color(display-p3 0.994 0.986 0.921);
-			--amber-3: color(display-p3 0.994 0.969 0.782);
-			--amber-4: color(display-p3 0.989 0.937 0.65);
-			--amber-5: color(display-p3 0.97 0.902 0.527);
-			--amber-6: color(display-p3 0.936 0.844 0.506);
-			--amber-7: color(display-p3 0.89 0.762 0.443);
-			--amber-8: color(display-p3 0.85 0.65 0.3);
-			--amber-9: color(display-p3 1 0.77 0.26);
-			--amber-10: color(display-p3 0.959 0.741 0.274);
-			--amber-11: color(display-p3 0.64 0.4 0);
-			--amber-12: color(display-p3 0.294 0.208 0.145);
-		}
-	}
-}
-
-:root,
-.light,
-.light-theme {
-	--red-1: #fffcfc;
-	--red-2: #fff7f7;
-	--red-3: #feebec;
-	--red-4: #ffdbdc;
-	--red-5: #ffcdce;
-	--red-6: #fdbdbe;
-	--red-7: #f4a9aa;
-	--red-8: #eb8e90;
-	--red-9: #e5484d;
-	--red-10: #dc3e42;
-	--red-11: #ce2c31;
-	--red-12: #641723;
-}
-
-@supports (color: color(display-p3 1 1 1)) {
-	@media (color-gamut: p3) {
-		:root,
-		.light,
-		.light-theme {
-			--red-1: color(display-p3 0.998 0.989 0.988);
-			--red-2: color(display-p3 0.995 0.971 0.971);
-			--red-3: color(display-p3 0.985 0.925 0.925);
-			--red-4: color(display-p3 0.999 0.866 0.866);
-			--red-5: color(display-p3 0.984 0.812 0.811);
-			--red-6: color(display-p3 0.955 0.751 0.749);
-			--red-7: color(display-p3 0.915 0.675 0.672);
-			--red-8: color(display-p3 0.872 0.575 0.572);
-			--red-9: color(display-p3 0.83 0.329 0.324);
-			--red-10: color(display-p3 0.798 0.294 0.285);
-			--red-11: color(display-p3 0.744 0.234 0.222);
-			--red-12: color(display-p3 0.36 0.115 0.143);
-		}
-	}
+	/* Optional: A bit of margin for visual separation */
+	margin: 1.5rem 0;
 }
 
 /* fill height chain */
@@ -322,9 +33,7 @@
 	overflow: auto !important;
 
 	/* your dark theme */
-	background-color: #111 !important;
-	color: #e5e7eb !important;
-	caret-color: #e5e7eb;
+	background-color: var(--background-primary) !important;
 }
 
 .mxeditor :has(> .mxeditor-content-editable) {
@@ -339,14 +48,12 @@
 	align-items: center;
 	gap: 8px;
 	padding: 8px 12px;
-	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-	background: #0f1115;
+	border-bottom: 1px solid;
 }
 
 .custom-title-input {
 	flex: 1 1 auto;
 	min-width: 0;
-	background: #0b0d12;
 	color: #e5e7eb;
 	border: 1px solid rgba(255, 255, 255, 0.12);
 	border-radius: 6px;
@@ -367,41 +74,6 @@
 	color: #f87171; /* error */
 	font-size: 12px;
 	margin-left: 4px;
-}
-
-/** Code mirror */
-
-.mdxeditor .cm-editor {
-	--sp-font-mono: var(--font-mono);
-	--sp-font-body: var(--font-body);
-	padding: var(--sp-space-4) 0;
-}
-
-.mdxeditor .sp-editor .cm-editor {
-	padding-bottom: 0;
-}
-
-.mdxeditor .cm-scroller {
-	padding: 0 !important;
-}
-
-.mdxeditor .cm-focused {
-	outline: none;
-}
-
-.mdxeditor .sp-wrapper {
-	overflow: hidden;
-}
-
-.mdxeditor .sp-layout {
-	border: none;
-}
-
-.mdxeditor .sp-cm pre {
-	white-space: break-spaces;
-	word-break: break-word;
-	overflow-wrap: anywhere;
-	flex-shrink: 1;
 }
 
 /** Diff viewer */
@@ -443,26 +115,26 @@
 	--accentBgHover: var(--blue-4);
 	--accentBgActive: var(--blue-5);
 	--accentLine: var(--blue-6);
-	--accentBorder: var(--blue-7);
+	--accentBorder: var(--interactive-accent);
 	--accentBorderHover: var(--blue-8);
-	--accentSolid: var(--blue-9);
+	--accentSolid: var(--interactive-accent);
 	--accentSolidHover: var(--blue-10);
 	--accentText: var(--blue-11);
 	--accentTextContrast: var(--blue-12);
 
 	--basePageBg: white;
-	--baseBase: var(--slate-1);
-	--baseBgSubtle: var(--slate-2);
-	--baseBg: var(--slate-3);
-	--baseBgHover: var(--slate-4);
-	--baseBgActive: var(--slate-5);
+	--baseBase: var(--background-primary);
+	--baseBgSubtle: yellow;
+	--baseBg: var(--background-secondary);
+	--baseBgHover: orange;
+	--baseBgActive: var(--table-border-color);
 	--baseLine: var(--slate-6);
-	--baseBorder: var(--slate-7);
+	--baseBorder: var(--table-border-color);
 	--baseBorderHover: var(--slate-8);
 	--baseSolid: var(--slate-9);
 	--baseSolidHover: var(--slate-10);
-	--baseText: var(--slate-11);
-	--baseTextContrast: var(--slate-12);
+	--baseText: var(--text-normal);
+	--baseTextContrast: var(--text-normal);
 
 	--admonitionTipBg: var(--cyan-4);
 	--admonitionTipBorder: var(--cyan-8);
@@ -518,7 +190,7 @@
 	--spacing-96: 24rem;
 
 	--radius-none: 0px;
-	--radius-small: var(--spacing-0_5);
+	--radius-small: var(--spacing-1);
 	--radius-base: var(--spacing-1);
 	--radius-medium: var(--spacing-1_5);
 	--radius-large: var(--spacing-2);
@@ -925,6 +597,11 @@
 	font-size: var(--text-sm);
 }
 
+/* Force the button in the first row header cell to opacity 1 when table is hovered */
+._tableEditor_1e2ox_714:hover ._iconButton_1e2ox_457 {
+	opacity: 1 !important;
+}
+
 ._iconButton_1e2ox_457 {
 	border: 0;
 	background-color: transparent;
@@ -936,6 +613,25 @@
 	box-sizing: border-box;
 	cursor: default;
 	color: var(--baseText);
+
+	min-height: 12px;
+	min-width: 12px;
+	width: 100%;
+	height: 100%;
+	border-radius: var(--radius-small);
+	position: absolute;
+	bottom: 0;
+	display: flex;
+	justify-content: center; /* Centers content horizontally */
+	align-items: center; /* Centers content vertically */
+	margin: 0 !important;
+	padding: 0 !important;
+	line-height: 0 !important;
+}
+
+._iconButton_1e2ox_457 svg {
+	width: 10px;
+	height: 10px;
 }
 
 @media (hover: hover) {
@@ -1235,6 +931,7 @@
 
 ._tableEditor_1e2ox_714 thead > tr > th {
 	text-align: right;
+	position: relative;
 }
 
 ._tableEditor_1e2ox_714 > tbody > tr > td:not(._toolCell_1e2ox_725),
@@ -1245,6 +942,7 @@
 	border: 1px solid var(--baseBgActive);
 	padding: var(--spacing-1) var(--spacing-2);
 	white-space: normal;
+	width: 2px !important;
 }
 
 :is(
@@ -1285,7 +983,7 @@
 ._tableEditor_1e2ox_714 ._addRowButton_1e2ox_746,
 ._tableEditor_1e2ox_714 ._addColumnButton_1e2ox_747,
 ._tableEditor_1e2ox_714 ._iconButton_1e2ox_457 {
-	opacity: 0.15;
+	opacity: 0;
 }
 
 @media (hover: hover) {
@@ -1294,20 +992,30 @@
 	._tableEditor_1e2ox_714:hover ._addRowButton_1e2ox_746,
 	._tableEditor_1e2ox_714:hover ._addColumnButton_1e2ox_747,
 	._tableEditor_1e2ox_714:hover ._iconButton_1e2ox_457 {
-		opacity: 0.3;
+		opacity: 0;
 	}
 
 	._tableEditor_1e2ox_714:hover ._tableColumnEditorTrigger_1e2ox_744:hover,
 	._tableEditor_1e2ox_714:hover ._tableRowEditorTrigger_1e2ox_745:hover,
-	._tableEditor_1e2ox_714:hover ._addRowButton_1e2ox_746:hover,
-	._tableEditor_1e2ox_714:hover ._addColumnButton_1e2ox_747:hover,
-	._tableEditor_1e2ox_714:hover ._iconButton_1e2ox_457:hover {
+	._tableEditor_1e2ox_714:hover ._addRowButton_1e2ox_746,
+	._tableEditor_1e2ox_714:hover ._addColumnButton_1e2ox_747,
+	._tableEditor_1e2ox_714:hover ._iconButton_1e2ox_457 {
 		opacity: 1;
 	}
 }
 
+/* Force the button in the first row header cell to opacity 1 when table is hovered */
+._tableEditor_1e2ox_714:hover
+	tbody
+	tr:first-child:hover
+	th:first-child
+	._tableColumnEditorTrigger_1e2ox_744 {
+	opacity: 1 !important;
+}
+
 ._toolCell_1e2ox_725 {
 	text-align: right;
+	position: relative;
 }
 
 ._toolCell_1e2ox_725 button {
@@ -1325,15 +1033,31 @@
 	all: unset;
 	box-sizing: border-box;
 	cursor: default;
-	padding: var(--spacing-1);
+	padding: 1px;
 	color: var(--baseTextContrast);
-	padding: var(--spacing-1);
-	border-radius: var(--radius-full);
+	border-radius: var(--radius-small);
 	opacity: 0.2;
+	position: absolute;
+	right: 0;
+	bottom: 0;
+	min-height: 12px;
+	min-width: 12px;
+	width: 100%;
+	height: 100%;
+
+	display: flex;
+
+	/* Center content (the SVG) horizontally */
+	justify-content: center;
+
+	/* Center content (the SVG) vertically */
+	align-items: center;
 }
 
 ._tableColumnEditorTrigger_1e2ox_744 svg {
 	display: block;
+	height: 10px;
+	width: 10px;
 }
 
 @media (hover: hover) {
@@ -1448,7 +1172,7 @@
 }
 
 ._tableToolsColumn_1e2ox_820 {
-	width: 2rem;
+	width: 2px;
 }
 
 ._tableToolsColumn_1e2ox_820 button {
@@ -1479,7 +1203,6 @@
 	all: unset;
 	box-sizing: border-box;
 	cursor: default;
-	padding: var(--spacing-1);
 	color: var(--baseTextContrast);
 	background-color: var(--baseBase);
 
@@ -1490,6 +1213,8 @@
 ._addColumnButton_1e2ox_747 svg,
 ._addRowButton_1e2ox_746 svg {
 	display: block;
+	height: 10px;
+	width: 10px;
 }
 
 @media (hover: hover) {
@@ -1519,7 +1244,6 @@
 
 ._addRowButton_1e2ox_746 {
 	width: 100%;
-	margin-top: var(--spacing-px);
 	box-sizing: border-box;
 	border-bottom-right-radius: var(--radius-medium);
 	border-bottom-left-radius: var(--radius-medium);

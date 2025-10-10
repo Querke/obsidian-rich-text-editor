@@ -9,6 +9,7 @@ import {
 	headingsPlugin,
 	HighlightToggle,
 	imagePlugin,
+	InsertCodeBlock,
 	InsertImage,
 	InsertTable,
 	InsertThematicBreak,
@@ -139,6 +140,8 @@ export const MarkdownEditorView = (props: Props) => {
 								<StrikeThroughSupSubToggles />
 								<HighlightToggle />
 								<CodeToggle />
+								<InsertCodeBlock />
+								<InsertThematicBreak />
 								<BlockTypeSelect />
 								<Separator />
 								<ListsToggle />
@@ -146,7 +149,6 @@ export const MarkdownEditorView = (props: Props) => {
 								<CreateLink />
 								<InsertImage />
 								<InsertTable />
-								<InsertThematicBreak />
 							</>
 						),
 					}),

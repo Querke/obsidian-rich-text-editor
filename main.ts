@@ -84,6 +84,8 @@ export default class HelloWorldPlugin extends Plugin {
 		this.registerInterval(
 			window.setInterval(() => console.log("setInterval"), 5 * 60 * 1000)
 		);
+
+		this.activateExampleView();
 	}
 
 	onunload() {
