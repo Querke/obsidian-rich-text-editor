@@ -127,7 +127,6 @@ export const MarkdownEditorView = (props: Props) => {
 				className="mxeditor"
 				ref={editorRef}
 				markdown={props.text}
-				placeholder={"Enter your markdown here..."}
 				onChange={handleContentChange}
 				contentEditableClassName="mxeditor-content-editable"
 				plugins={[
