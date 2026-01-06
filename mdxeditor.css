@@ -1,3 +1,10 @@
+.mdxeditor .cm-editor .cm-content {
+	font-family: var(--font-monospace);
+}
+
+.mdxeditor ._codeMirrorWrapper_1e2ox_392 {
+	overflow: visible;
+}
 
 /** Diff viewer */
 
