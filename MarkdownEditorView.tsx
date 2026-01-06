@@ -28,9 +28,9 @@ import {
 	toolbarPlugin,
 	UndoRedo,
 } from "@mdxeditor/editor";
+import { oneDark } from "@codemirror/theme-one-dark";
+import { EditorView } from "@codemirror/view";
 import { useEffect, useRef, useState } from "react";
-
-import "./styles.css"; // Short comment: Stylesheet import
 
 interface Props {
 	title: string;
@@ -121,10 +121,19 @@ export const MarkdownEditorView = (props: Props) => {
 		};
 	}, [titleState[0]]);
 
+	const isDark = document.body.classList.contains("theme-dark");
+
+	const cmFontTheme = EditorView.theme({
+		"&": {
+			fontFamily: "Liberation Mono, Courier New, monospace",
+			fontSize: "14px",
+		},
+	});
+
 	return (
 		<div ref={hostRef} className="react-root">
 			<MDXEditor
-				className="mxeditor"
+				className={isDark ? "dark-theme dark-editor" : ""}
 				ref={editorRef}
 				markdown={props.text}
 				onChange={handleContentChange}
@@ -185,6 +194,10 @@ export const MarkdownEditorView = (props: Props) => {
 							svelte: "Svelte",
 							lua: "Lua",
 						},
+
+						codeMirrorExtensions: isDark
+							? [oneDark, cmFontTheme]
+							: [cmFontTheme],
 					}),
 				]}
 			/>

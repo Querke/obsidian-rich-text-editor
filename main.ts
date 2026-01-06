@@ -6,6 +6,7 @@ import "./view.css";
 import "./mdxeditor.css";
 
 export default class HelloWorldPlugin extends Plugin {
+	private isDarkTheme: boolean | null = null;
 
 	async onload() {
 		this.registerView(
@@ -20,6 +21,18 @@ export default class HelloWorldPlugin extends Plugin {
 		this.registerDomEvent(document, "click", (evt: MouseEvent) => {
 			console.log("click", evt);
 		});
+
+		this.isDarkTheme = document.body.classList.contains("theme-dark");
+		this.registerEvent(
+			this.app.workspace.on("css-change", () => {
+				const isDark = document.body.classList.contains("theme-dark");
+
+				if (this.isDarkTheme !== isDark) {
+					this.isDarkTheme = isDark;
+					this.activateExampleView(); // reload view
+				}
+			})
+		);
 
 		this.activateExampleView();
 	}
