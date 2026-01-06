@@ -2,7 +2,11 @@
 import { Plugin, WorkspaceLeaf } from "obsidian";
 import { ExampleView, VIEW_TYPE_EXAMPLE } from "./ExampleView";
 
+import "./view.css";
+import "./mdxeditor.css";
+
 export default class HelloWorldPlugin extends Plugin {
+
 	async onload() {
 		this.registerView(
 			VIEW_TYPE_EXAMPLE,

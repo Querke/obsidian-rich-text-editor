@@ -1,0 +1,77 @@
+/* ---------------------------------------------------------------------------- */
+
+blockquote {
+	/* 1. Define the vertical line: width, style, and color */
+	border-left: 2px solid var(--interactive-accent);
+
+	/* 2. Add space between the line and the quoted text */
+	padding-left: 1rem;
+
+	/* Optional: A bit of margin for visual separation */
+	margin: 1.5rem 0;
+}
+
+/* fill height chain */
+.example-view-root,
+.example-view-root .react-root {
+	height: 100%;
+}
+
+/* make MDXEditor flex and stop growing with content */
+.mdxeditor,
+.mxeditor {
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+}
+
+/* editable area takes remaining space + scrolls */
+.mdxeditor-root-contenteditable,
+.mxeditor-content-editable {
+	flex: 1 1 0;
+	min-height: 0 !important;
+	overflow: auto !important;
+
+	/* your dark theme */
+	background-color: var(--background-primary) !important;
+}
+
+.mxeditor :has(> .mxeditor-content-editable) {
+	height: 100%;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+}
+
+.custom-titlebar {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 12px;
+	border-bottom: 1px solid;
+}
+
+.custom-title-input {
+	flex: 1 1 auto;
+	min-width: 0;
+	color: #e5e7eb;
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	border-radius: 6px;
+	padding: 6px 8px;
+	outline: none;
+}
+
+.custom-title-save {
+	padding: 6px 10px;
+	border-radius: 6px;
+	border: 1px solid rgba(255, 255, 255, 0.15);
+	background: #151922;
+	color: #e5e7eb;
+	cursor: pointer;
+}
+
+.custom-title-msg {
+	color: #f87171; /* error */
+	font-size: 12px;
+	margin-left: 4px;
+}
