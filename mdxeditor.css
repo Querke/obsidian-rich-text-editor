@@ -4,6 +4,12 @@
 
 .mdxeditor ._codeMirrorWrapper_1e2ox_392 {
 	overflow: visible;
+	padding: 0;
+	border: 0;
+}
+
+.mdxeditor .cm-editor {
+	border-radius: 6px;
 }
 
 /** Diff viewer */
