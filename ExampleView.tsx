@@ -1,5 +1,12 @@
 // ExampleView.tsx
-import { ItemView, MarkdownView, Notice, TFile, WorkspaceLeaf } from "obsidian";
+import {
+	ItemView,
+	MarkdownView,
+	Notice,
+	Scope,
+	TFile,
+	WorkspaceLeaf,
+} from "obsidian";
 import { StrictMode } from "react";
 import { Root, createRoot } from "react-dom/client";
 import { MarkdownEditorView } from "./MarkdownEditorView";
@@ -13,6 +20,30 @@ export class ExampleView extends ItemView {
 
 	constructor(leaf: WorkspaceLeaf) {
 		super(leaf);
+
+		this.scope = new Scope(this.app.scope);
+
+		// Send to mdx editor: Ctrl+B to make it bold, Ctrl+I to make it italic, or Ctrl+U to underline it.  use Cmd+K to open the link dialog.
+
+		this.scope.register(["Mod"], "b", (evt: KeyboardEvent) => {
+			evt.preventDefault();
+			window.dispatchEvent(new CustomEvent("plugin:toggle-bold"));
+		});
+
+		this.scope.register(["Mod"], "i", (evt) => {
+			evt.preventDefault();
+			document.dispatchEvent(new CustomEvent("plugin:toggle-italic"));
+		});
+
+		this.scope.register(["Mod"], "u", (evt) => {
+			evt.preventDefault();
+			document.dispatchEvent(new CustomEvent("plugin:toggle-underline"));
+		});
+
+		this.scope.register(["Mod"], "k", (evt) => {
+			evt.preventDefault();
+			document.dispatchEvent(new CustomEvent("plugin:show-link-dialog"));
+		});
 	}
 
 	getViewType(): string {

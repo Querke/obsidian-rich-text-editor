@@ -1,4 +1,6 @@
 // ReactView.tsx
+import { oneDark } from "@codemirror/theme-one-dark";
+import { EditorView } from "@codemirror/view";
 import {
 	BlockTypeSelect,
 	BoldItalicUnderlineToggles,
@@ -28,8 +30,6 @@ import {
 	toolbarPlugin,
 	UndoRedo,
 } from "@mdxeditor/editor";
-import { oneDark } from "@codemirror/theme-one-dark";
-import { EditorView } from "@codemirror/view";
 import { useEffect, useRef, useState } from "react";
 
 interface Props {
