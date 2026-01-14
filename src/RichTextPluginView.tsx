@@ -238,7 +238,7 @@ export class RichTextPluginView extends ItemView {
 	}
 
 	async onOpen(): Promise<void> {
-		this.contentEl.addClass("example-view-root"); // <-- add
+		this.contentEl.addClass("rich-text-view-root"); // <-- add
 		await this.loadText();
 
 		// this.registerEvent(
