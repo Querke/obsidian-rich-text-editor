@@ -1,3 +1,10 @@
+/* Prevent images from overflowing the editor width */
+.mxeditor-content-editable img {
+	height: auto; /* Maintain aspect ratio */
+	display: block; /* Prevents tiny whitespace at the bottom */
+	max-width: min(100%, var(--file-line-width));
+}
+
 .mdxeditor .cm-editor .cm-content {
 	font-family: var(--font-monospace);
 }

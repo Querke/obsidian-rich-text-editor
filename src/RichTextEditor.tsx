@@ -167,6 +167,8 @@ export const RichTextEditor = (props: Props) => {
 					markdownShortcutPlugin(),
 					tablePlugin(),
 					imagePlugin({
+						disableImageResize: true,
+
 						// 1. Handle Uploads (what you just did)
 						imageUploadHandler: async (image: File) => {
 							return await props.onImageUpload(image);
