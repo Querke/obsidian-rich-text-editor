@@ -18,21 +18,7 @@ export class ExampleView extends ItemView {
 	lastFilePath: string | null = null;
 	text: string = "";
 
-	private onSave = async (newText: string) => {
-		const f = this.pickFile();
-		if (f) {
-			// CONVERT OUTPUT: Standard ![](<Link>) -> Wiki-links ![[Link]]
-			// We decodeURI to get spaces back
-			const textToSave = newText.replace(
-				/!\[\]\((.*?)\)/g,
-				(match, path) => {
-					return `![[${decodeURI(path)}]]`;
-				}
-			);
-
-			await this.app.vault.modify(f, textToSave);
-		}
-	};
+	// ExampleView.tsx
 
 	constructor(leaf: WorkspaceLeaf) {
 		super(leaf);
@@ -69,6 +55,27 @@ export class ExampleView extends ItemView {
 	getDisplayText(): string {
 		return "Example view";
 	}
+
+	private onSave = async (newText: string) => {
+		const f = this.pickFile();
+		if (f) {
+			const textToSave = newText.replace(
+				/!\[\]\((.*?)\)/g,
+				(match, path) => {
+					let cleanPath = path;
+
+					// Remove wrapping <> if present (CommonMark syntax for paths with spaces)
+					if (cleanPath.startsWith("<") && cleanPath.endsWith(">")) {
+						cleanPath = cleanPath.slice(1, -1);
+					}
+
+					return `![[${decodeURI(cleanPath)}]]`;
+				}
+			);
+
+			await this.app.vault.modify(f, textToSave);
+		}
+	};
 
 	private pickFile(): TFile | null {
 		console.log("picking file, last: ", this.lastFilePath);
@@ -117,23 +124,51 @@ export class ExampleView extends ItemView {
 	}
 
 	private async handleImageUpload(file: File): Promise<string> {
-		// Generate Obsidian-style timestamp name
-		// Note: TypeScript might complain about moment(), you can use (window as any).moment() or standard Date
 		const date = new Date();
 		const timestamp = date
 			.toISOString()
 			.replace(/[-:T.]/g, "")
 			.slice(0, 14);
 		const extension = file.name.split(".").pop() || "png";
-		const filename = `Pasted image ${timestamp}.${extension}`;
+		const baseFilename = `Pasted image ${timestamp}.${extension}`;
 
+		// 1. Calculate the path based on user settings (Root, Subfolder, etc.)
+		const filePath =
+			await this.app.fileManager.getAvailablePathForAttachment(
+				baseFilename,
+				this.lastFilePath || ""
+			);
+
+		// 2. Ensure the folder exists (e.g. if creating a new "Assets" subfolder)
+		const folderPath = filePath.substring(0, filePath.lastIndexOf("/"));
+		if (folderPath) {
+			// Use adapter.mkdir which is often recursive or check existence
+			if (!(await this.app.vault.adapter.exists(folderPath))) {
+				await this.app.vault.createFolder(folderPath);
+			}
+		}
+
+		// 3. Write the file
 		const buffer = await file.arrayBuffer();
+		const createdFile = await this.app.vault.createBinary(filePath, buffer);
 
-		// Save to vault root
-		await this.app.vault.createBinary(filename, buffer);
+		// 4. Generate the link text (e.g. "![[Image.png]]" or "![](Image.png)")
+		const linkText = this.app.fileManager.generateMarkdownLink(
+			createdFile,
+			this.lastFilePath || ""
+		);
 
-		// Return the filename (MDXEditor will create ![](filename))
-		return filename;
+		// 5. Extract just the path from the generated link
+		// This handles both Wiki-links ![[Path]] and Standard links ![](Path)
+		let cleanPath = linkText;
+
+		// // Remove Wiki-link brackets ![[...]]
+		if (cleanPath.startsWith("[[") && cleanPath.endsWith("]]")) {
+			cleanPath = cleanPath.slice(2, -2);
+		}
+
+		// 6. Decode URI component in case generateMarkdownLink encoded spaces
+		return decodeURI(cleanPath);
 	}
 
 	private resolveImagePath = (src: string): string => {
