@@ -1,6 +1,5 @@
 // ReactView.tsx
 import { oneDark } from "@codemirror/theme-one-dark";
-import { EditorView } from "@codemirror/view";
 import {
 	BlockTypeSelect,
 	BoldItalicUnderlineToggles,
@@ -42,37 +41,13 @@ interface Props {
 	onResolveImage: (src: string) => string;
 }
 
-export const MarkdownEditorView = (props: Props) => {
+export const RichTextEditor = (props: Props) => {
 	const editorRef = useRef<MDXEditorMethods>(null);
 	const hostRef = useRef<HTMLDivElement | null>(null);
 	const [titleBarContainer, setTitleBarContainer] =
 		useState<HTMLElement | null>(null);
 
-	const titleState = useState<string>(props.title);
-
-	const handleContentChange = (newMarkdown: string) => {
-		props.onSave(newMarkdown);
-	};
-
-	const handleWrapperClick = (e: React.MouseEvent) => {
-		// Only focus if the user clicked the background wrapper directly,
-		// not if they clicked an actual paragraph/image inside it.
-		if (e.target === e.currentTarget) {
-			editorRef.current?.focus();
-		}
-	};
-
-	useEffect(() => {
-		if (props.title !== titleState[0]) {
-			titleState[1](props.title);
-			const input = hostRef.current?.querySelector(
-				".custom-title-input"
-			) as HTMLInputElement | null;
-			if (input && input.value !== props.title) {
-				input.value = props.title;
-			}
-		}
-	}, [props.title]);
+	const isDark = document.body.classList.contains("theme-dark");
 
 	useEffect(() => {
 		if (!hostRef.current) return;
@@ -98,6 +73,20 @@ export const MarkdownEditorView = (props: Props) => {
 			}
 		}, 0);
 	}, []);
+
+	const handleContentChange = (newMarkdown: string) => {
+		props.onSave(newMarkdown);
+	};
+
+	function focusEditor(e: React.MouseEvent<HTMLDivElement>): void {
+		if (
+			(e.target as HTMLElement).classList.contains("custom-title-input")
+		) {
+			return;
+		}
+
+		editorRef.current?.focus();
+	}
 
 	const TitleBar = () => {
 		const [value, setValue] = useState(props.title);
@@ -136,18 +125,6 @@ export const MarkdownEditorView = (props: Props) => {
 			/>
 		);
 	};
-
-	const isDark = document.body.classList.contains("theme-dark");
-
-	function focusEditor(e: React.MouseEvent<HTMLDivElement>): void {
-		if (
-			(e.target as HTMLElement).classList.contains("custom-title-input")
-		) {
-			return;
-		}
-
-		editorRef.current?.focus();
-	}
 
 	return (
 		<div

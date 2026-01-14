@@ -1,25 +1,24 @@
 // main.ts
 import { Plugin, WorkspaceLeaf } from "obsidian";
-import { ExampleView, VIEW_TYPE_EXAMPLE } from "./src/ExampleView";
+import {
+	RichTextPluginView,
+	VIEW_TYPE_RICH_TEXT_EDITOR,
+} from "./src/RichTextPluginView";
 
 import "./src/view.css";
 import "./src/mdxeditor.css";
 
-export default class HelloWorldPlugin extends Plugin {
+export default class RichTextPlugin extends Plugin {
 	private isDarkTheme: boolean | null = null;
 
 	async onload() {
 		this.registerView(
-			VIEW_TYPE_EXAMPLE,
-			(leaf: WorkspaceLeaf) => new ExampleView(leaf)
+			VIEW_TYPE_RICH_TEXT_EDITOR,
+			(leaf: WorkspaceLeaf) => new RichTextPluginView(leaf)
 		);
 
-		this.addRibbonIcon("dice", "Open Example View", () => {
-			this.activateExampleView();
-		});
-
-		this.registerDomEvent(document, "click", (evt: MouseEvent) => {
-			console.log("click", evt);
+		this.addRibbonIcon("pencil", "Open Rich Text Editor", () => {
+			this.activateView();
 		});
 
 		this.isDarkTheme = document.body.classList.contains("theme-dark");
@@ -29,24 +28,27 @@ export default class HelloWorldPlugin extends Plugin {
 
 				if (this.isDarkTheme !== isDark) {
 					this.isDarkTheme = isDark;
-					this.activateExampleView(); // reload view
+					this.activateView(); // reload view
 				}
 			})
 		);
 
-		this.activateExampleView();
+		this.activateView();
 	}
 
 	onunload() {
-		this.app.workspace.detachLeavesOfType(VIEW_TYPE_EXAMPLE);
+		this.app.workspace.detachLeavesOfType(VIEW_TYPE_RICH_TEXT_EDITOR);
 	}
 
-	async activateExampleView(): Promise<void> {
-		this.app.workspace.detachLeavesOfType(VIEW_TYPE_EXAMPLE);
+	async activateView(): Promise<void> {
+		this.app.workspace.detachLeavesOfType(VIEW_TYPE_RICH_TEXT_EDITOR);
 		const leaf =
 			this.app.workspace.getRightLeaf(false) ??
 			this.app.workspace.getLeaf(true);
-		await leaf.setViewState({ type: VIEW_TYPE_EXAMPLE, active: true });
+		await leaf.setViewState({
+			type: VIEW_TYPE_RICH_TEXT_EDITOR,
+			active: true,
+		});
 		this.app.workspace.revealLeaf(leaf);
 	}
 }

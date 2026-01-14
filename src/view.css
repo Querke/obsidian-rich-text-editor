@@ -12,8 +12,8 @@ blockquote {
 }
 
 /* fill height chain */
-.example-view-root,
-.example-view-root .react-root {
+.rich-text-view-root,
+.rich-text-view-root .react-root {
 	height: 100%;
 }
 
@@ -33,7 +33,7 @@ blockquote {
 	overflow: auto !important;
 }
 
-.example-view-root {
+.rich-text-view-root {
 	background-color: var(--background-primary) !important;
 }
 
@@ -44,11 +44,6 @@ blockquote {
 	flex-direction: column;
 }
 
-.custom-title-msg {
-	color: #f87171; /* error */
-	font-size: 12px;
-	margin-left: 4px;
-}
 .custom-titlebar {
 	padding: var(--spacing-3); /* Match editor side padding */
 	padding-bottom: 0;

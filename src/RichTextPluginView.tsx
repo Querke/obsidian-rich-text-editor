@@ -9,11 +9,11 @@ import {
 } from "obsidian";
 import { StrictMode } from "react";
 import { Root, createRoot } from "react-dom/client";
-import { MarkdownEditorView } from "./MarkdownEditorView";
+import { RichTextEditor } from "./RichTextEditor";
 
-export const VIEW_TYPE_EXAMPLE = "example-view";
+export const VIEW_TYPE_RICH_TEXT_EDITOR = "rich-text-view";
 
-export class ExampleView extends ItemView {
+export class RichTextPluginView extends ItemView {
 	root: Root | null = null;
 	lastFilePath: string | null = null;
 	text: string = "";
@@ -49,11 +49,11 @@ export class ExampleView extends ItemView {
 	}
 
 	getViewType(): string {
-		return VIEW_TYPE_EXAMPLE;
+		return VIEW_TYPE_RICH_TEXT_EDITOR;
 	}
 
 	getDisplayText(): string {
-		return "Example view";
+		return "Rich Text Editor";
 	}
 
 	private onSave = async (newText: string) => {
@@ -78,21 +78,14 @@ export class ExampleView extends ItemView {
 	};
 
 	private pickFile(): TFile | null {
-		console.log("picking file, last: ", this.lastFilePath);
-
 		const file = this.app.workspace.getActiveFile();
 		if (file instanceof TFile) {
 			this.lastFilePath = file.path;
-			console.log("setting: ", this.lastFilePath);
-
 			return file;
 		}
 
 		if (this.lastFilePath) {
-			console.log("opening last file path: " + this.lastFilePath);
-
 			const af = this.app.vault.getAbstractFileByPath(this.lastFilePath);
-			console.log(af);
 			if (af instanceof TFile) {
 				return af;
 			}
@@ -232,7 +225,7 @@ export class ExampleView extends ItemView {
 
 		this.root.render(
 			<StrictMode>
-				<MarkdownEditorView
+				<RichTextEditor
 					title={this.pickFile()?.basename ?? ""}
 					text={this.text}
 					onSave={this.onSave}
