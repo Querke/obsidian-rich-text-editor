@@ -70,3 +70,18 @@ blockquote {
 	font-family: var(--inline-title-font);
 	letter-spacing: -0.015em;
 }
+
+/* 1. Center the Editor Content */
+.rich-text-view-root.is-readable-line-width .mxeditor-content-editable {
+	max-width: var(--file-line-width);
+	width: 100%;
+	margin: 0 auto; /* Center it */
+}
+
+/* 2. Center the Title Input as well */
+.rich-text-view-root.is-readable-line-width .custom-title-input {
+	max-width: var(--file-line-width);
+	width: 100%;
+	margin: 0 auto;
+	display: block; /* Ensure margin auto works */
+}

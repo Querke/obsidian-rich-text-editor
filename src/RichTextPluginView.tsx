@@ -241,19 +241,23 @@ export class RichTextPluginView extends ItemView {
 		this.contentEl.addClass("rich-text-view-root"); // <-- add
 		await this.loadText();
 
-		// this.registerEvent(
-		// 	this.app.workspace.on("file-open", async (file) => {
-		// 		await this.loadText();
-		// 	})
-		// );
+		// 1. Initial check
+		this.updateReadableLineLength();
 
-		// this.registerEvent(
-		// 	this.app.vault.on("modify", async (f) => {
-		// 		if (f instanceof TFile && f.path === this.lastFilePath) {
-		// 			await this.loadText();
-		// 		}
-		// 	})
-		// );
+		// 2. Listen for future changes (settings toggle)
+		this.registerEvent(
+			this.app.workspace.on("css-change", () =>
+				this.updateReadableLineLength()
+			)
+		);
+
+		await this.loadText();
+	}
+
+	private updateReadableLineLength() {
+		// @ts-ignore - access internal Obsidian config
+		const isReadable = this.app.vault.getConfig("readableLineLength");
+		this.contentEl.toggleClass("is-readable-line-width", isReadable);
 	}
 
 	async onClose(): Promise<void> {
