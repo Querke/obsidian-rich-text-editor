@@ -37,7 +37,7 @@ interface Props {
 	title: string;
 	text: string;
 	onSave: (newText: string) => void;
-	onRename: (nextTitle: string) => void;
+	onRename: (nextTitle: string) => Promise<boolean>;
 	onImageUpload: (image: File) => Promise<string>;
 	onResolveImage: (src: string) => string;
 }
@@ -99,30 +99,41 @@ export const MarkdownEditorView = (props: Props) => {
 		}, 0);
 	}, []);
 
-	// 2. Define your component as standard JSX
 	const TitleBar = () => {
 		const [value, setValue] = useState(props.title);
 
-		// Update local state when file changes
+		// Sync local state if the file changes externally
 		useEffect(() => setValue(props.title), [props.title]);
 
+		const handleSave = async () => {
+			// 1. Don't trigger if nothing changed
+			if (value.trim() === props.title) return;
+
+			// 2. Call the rename function and wait for the result
+			const success = await props.onRename(value);
+
+			// 3. If rename failed (returned false), revert the input to the old title
+			if (!success) {
+				setValue(props.title);
+			}
+		};
+
 		return (
-			<>
-				<input
-					className="custom-title-input"
-					value={value}
-					onChange={(e) => setValue(e.target.value)}
-					onKeyDown={(e) =>
-						e.key === "Enter" && props.onRename(value)
+			<input
+				className="custom-title-input"
+				value={value}
+				placeholder="Title"
+				onChange={(e) => setValue(e.target.value)}
+				// Save when user clicks away
+				onBlur={handleSave}
+				// Save when user hits Enter
+				onKeyDown={(e) => {
+					if (e.key === "Enter") {
+						handleSave();
+						e.currentTarget.blur(); // Remove focus from input
 					}
-				/>
-				<button
-					className="custom-title-save"
-					onClick={() => props.onRename(value)}
-				>
-					Save
-				</button>
-			</>
+				}}
+			/>
 		);
 	};
 

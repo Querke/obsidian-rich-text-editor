@@ -192,9 +192,6 @@ mark {
 	color: var(--text-normal);
 }
 
-._editorWrapper_1e2ox_155 {
-}
-
 ._nestedListItem_1e2ox_158 {
 	list-style: none;
 }
@@ -210,7 +207,7 @@ mark {
 	overflow-x: auto;
 	position: sticky;
 	top: 0;
-	background-color: var(--baseBg);
+	background-color: var(--background-primary);
 	width: inherit;
 }
 
@@ -448,6 +445,7 @@ mark {
 	color: var(--baseTextContrast);
 
 	padding: var(--spacing-3);
+	padding-top: 0;
 }
 
 ._contentEditable_1e2ox_380:focus {
