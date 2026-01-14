@@ -31,6 +31,7 @@ import {
 	UndoRedo,
 } from "@mdxeditor/editor";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 interface Props {
 	title: string;
@@ -44,11 +45,21 @@ interface Props {
 export const MarkdownEditorView = (props: Props) => {
 	const editorRef = useRef<MDXEditorMethods>(null);
 	const hostRef = useRef<HTMLDivElement | null>(null);
+	const [titleBarContainer, setTitleBarContainer] =
+		useState<HTMLElement | null>(null);
 
 	const titleState = useState<string>(props.title);
 
 	const handleContentChange = (newMarkdown: string) => {
 		props.onSave(newMarkdown);
+	};
+
+	const handleWrapperClick = (e: React.MouseEvent) => {
+		// Only focus if the user clicked the background wrapper directly,
+		// not if they clicked an actual paragraph/image inside it.
+		if (e.target === e.currentTarget) {
+			editorRef.current?.focus();
+		}
 	};
 
 	useEffect(() => {
@@ -64,69 +75,75 @@ export const MarkdownEditorView = (props: Props) => {
 	}, [props.title]);
 
 	useEffect(() => {
-		const host = hostRef.current;
-		if (!host) {
-			return;
-		}
-		const root =
-			(host.querySelector(".mxeditor") as HTMLElement | null) ??
-			(host.querySelector(".mdxeditor") as HTMLElement | null);
-		const toolbar = root?.querySelector(
-			'[role="toolbar"]'
-		) as HTMLElement | null;
-		if (!root || !toolbar) {
-			return;
-		}
+		if (!hostRef.current) return;
 
-		let bar = root.querySelector(
-			".custom-titlebar"
-		) as HTMLDivElement | null;
-		if (!bar) {
-			bar = document.createElement("div");
-			bar.className = "custom-titlebar";
-			toolbar.insertAdjacentElement("afterend", bar);
-		}
-		bar.innerHTML = "";
+		// Wait for MDXEditor to render
+		setTimeout(() => {
+			const root = hostRef.current?.querySelector(
+				".mdxeditor"
+			) as HTMLElement;
+			const toolbar = root?.querySelector('[role="toolbar"]');
 
-		const input = document.createElement("input");
-		input.className = "custom-title-input";
-		input.type = "text";
-		input.value = titleState[0];
-		input.placeholder = "Title";
-		input.autocomplete = "off";
+			if (toolbar) {
+				let bar = root.querySelector(".custom-titlebar") as HTMLElement;
+				if (!bar) {
+					bar = document.createElement("div");
+					bar.className = "custom-titlebar";
+					// Inject the empty DIV into the DOM
+					toolbar.insertAdjacentElement("afterend", bar);
+				}
 
-		const btn = document.createElement("button");
-		btn.className = "custom-title-save";
-		btn.type = "button";
-		btn.textContent = "Save title";
-
-		const save = async () => {
-			const next = input.value.trim();
-			const res = props.onRename(next);
-		};
-
-		const onKey = async (e: KeyboardEvent) => {
-			if (e.key === "Enter") {
-				await save();
+				// Save this DOM element to state
+				setTitleBarContainer(bar);
 			}
-		};
+		}, 0);
+	}, []);
 
-		btn.addEventListener("click", save);
-		input.addEventListener("keydown", onKey);
+	// 2. Define your component as standard JSX
+	const TitleBar = () => {
+		const [value, setValue] = useState(props.title);
 
-		bar.appendChild(input);
-		bar.appendChild(btn);
+		// Update local state when file changes
+		useEffect(() => setValue(props.title), [props.title]);
 
-		return () => {
-			btn.removeEventListener("click", save);
-			input.removeEventListener("keydown", onKey);
-		};
-	}, [titleState[0]]);
+		return (
+			<>
+				<input
+					className="custom-title-input"
+					value={value}
+					onChange={(e) => setValue(e.target.value)}
+					onKeyDown={(e) =>
+						e.key === "Enter" && props.onRename(value)
+					}
+				/>
+				<button
+					className="custom-title-save"
+					onClick={() => props.onRename(value)}
+				>
+					Save
+				</button>
+			</>
+		);
+	};
 
 	const isDark = document.body.classList.contains("theme-dark");
 
+	function focusEditor(e: React.MouseEvent<HTMLDivElement>): void {
+		if (
+			(e.target as HTMLElement).classList.contains("custom-title-input")
+		) {
+			return;
+		}
+
+		editorRef.current?.focus();
+	}
+
 	return (
-		<div ref={hostRef} className="react-root">
+		<div
+			ref={hostRef}
+			className="react-root"
+			onClick={(e) => focusEditor(e)}
+		>
 			<MDXEditor
 				className={isDark ? "dark-theme dark-editor" : ""}
 				ref={editorRef}
@@ -207,6 +224,7 @@ export const MarkdownEditorView = (props: Props) => {
 					}),
 				]}
 			/>
+			{titleBarContainer && createPortal(<TitleBar />, titleBarContainer)}
 		</div>
 	);
 };
