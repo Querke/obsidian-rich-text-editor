@@ -37,6 +37,8 @@ interface Props {
 	text: string;
 	onSave: (newText: string) => void;
 	onRename: (nextTitle: string) => void;
+	onImageUpload: (image: File) => Promise<string>;
+	onResolveImage: (src: string) => string;
 }
 
 export const MarkdownEditorView = (props: Props) => {
@@ -166,7 +168,20 @@ export const MarkdownEditorView = (props: Props) => {
 					thematicBreakPlugin(),
 					markdownShortcutPlugin(),
 					tablePlugin(),
-					imagePlugin(),
+					imagePlugin({
+						// 1. Handle Uploads (what you just did)
+						imageUploadHandler: async (image: File) => {
+							return await props.onImageUpload(image);
+						},
+						// 2. Handle Viewing (resolve vault paths to viewable URLs)
+						imagePreviewHandler: async (imageSource: string) => {
+							if (imageSource.startsWith("http")) {
+								return imageSource;
+							}
+							// The return value will be automatically wrapped in a Promise
+							return props.onResolveImage(imageSource);
+						},
+					}),
 					linkPlugin(),
 					linkDialogPlugin(),
 					codeBlockPlugin({ defaultCodeBlockLanguage: "js" }),

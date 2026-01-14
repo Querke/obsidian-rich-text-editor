@@ -18,6 +18,22 @@ export class ExampleView extends ItemView {
 	lastFilePath: string | null = null;
 	text: string = "";
 
+	private onSave = async (newText: string) => {
+		const f = this.pickFile();
+		if (f) {
+			// CONVERT OUTPUT: Standard ![](<Link>) -> Wiki-links ![[Link]]
+			// We decodeURI to get spaces back
+			const textToSave = newText.replace(
+				/!\[\]\((.*?)\)/g,
+				(match, path) => {
+					return `![[${decodeURI(path)}]]`;
+				}
+			);
+
+			await this.app.vault.modify(f, textToSave);
+		}
+	};
+
 	constructor(leaf: WorkspaceLeaf) {
 		super(leaf);
 
@@ -89,9 +105,48 @@ export class ExampleView extends ItemView {
 
 	private async loadText(): Promise<void> {
 		const f = this.pickFile();
-		this.text = f ? await this.app.vault.read(f) : "";
+		let rawText = f ? await this.app.vault.read(f) : "";
+
+		// CONVERT INPUT: Wiki-links ![[Link]] -> Standard ![](<Link>)
+		// We use encodeURI to handle spaces in filenames which standard markdown hates
+		this.text = rawText.replace(/!\[\[(.*?)\]\]/g, (match, path) => {
+			return `![](${encodeURI(path)})`;
+		});
+
 		this.render();
 	}
+
+	private async handleImageUpload(file: File): Promise<string> {
+		// Generate Obsidian-style timestamp name
+		// Note: TypeScript might complain about moment(), you can use (window as any).moment() or standard Date
+		const date = new Date();
+		const timestamp = date
+			.toISOString()
+			.replace(/[-:T.]/g, "")
+			.slice(0, 14);
+		const extension = file.name.split(".").pop() || "png";
+		const filename = `Pasted image ${timestamp}.${extension}`;
+
+		const buffer = await file.arrayBuffer();
+
+		// Save to vault root
+		await this.app.vault.createBinary(filename, buffer);
+
+		// Return the filename (MDXEditor will create ![](filename))
+		return filename;
+	}
+
+	private resolveImagePath = (src: string): string => {
+		const decodedPath = decodeURI(src);
+		const file = this.app.metadataCache.getFirstLinkpathDest(
+			decodedPath,
+			this.lastFilePath || ""
+		);
+
+		if (file) return this.app.vault.adapter.getResourcePath(file.path);
+
+		return src;
+	};
 
 	private render(): void {
 		if (!this.root) {
@@ -145,13 +200,10 @@ export class ExampleView extends ItemView {
 				<MarkdownEditorView
 					title={this.pickFile()?.basename ?? ""}
 					text={this.text}
-					onSave={async (newText: string) => {
-						const f = this.pickFile();
-						if (f) {
-							await this.app.vault.modify(f, newText);
-						}
-					}}
+					onSave={this.onSave}
 					onRename={handleRename}
+					onImageUpload={(file) => this.handleImageUpload(file)}
+					onResolveImage={this.resolveImagePath}
 				/>
 			</StrictMode>
 		);
