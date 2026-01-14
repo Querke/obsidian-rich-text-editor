@@ -2,6 +2,11 @@
 	font-family: var(--font-monospace);
 }
 
+li[role="checkbox"]:focus,
+li[role="checkbox"]:focus-within {
+	outline: none;
+}
+
 .mdxeditor ._codeMirrorWrapper_1e2ox_392 {
 	overflow: visible;
 	padding: 0;
@@ -59,7 +64,7 @@
 	--accentText: var(--blue-11);
 	--accentTextContrast: var(--blue-12);
 
-	--basePageBg: white;
+	--basePageBg: var(--background-secondary);
 	--baseBase: var(--background-primary);
 	--baseBgSubtle: var(--background-primary);
 	--baseBg: var(--background-secondary);
@@ -134,8 +139,6 @@
 	--radius-extra-large: var(--spacing-3);
 	--radius-full: 9999px;
 
-	--font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-		"Liberation Mono", "Courier New", monospace;
 	--font-body: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
 		Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue",
 		sans-serif;
@@ -147,6 +150,11 @@
 
 	font-family: var(--font-body);
 	color: var(--baseText);
+}
+
+mark {
+	background-color: var(--text-highlight-bg);
+	color: var(--text-normal);
 }
 
 ._editorWrapper_1e2ox_155 {
@@ -436,8 +444,12 @@
 	gap: var(--spacing-1);
 	padding: var(--spacing-1);
 	z-index: 1;
-	background-color: var(--baseBase);
 	border-bottom-left-radius: var(--radius-base);
+	opacity: 0;
+}
+
+._codeMirrorWrapper_1e2ox_392:hover ._codeMirrorToolbar_1e2ox_409 {
+	opacity: 1;
 }
 
 ._frontmatterWrapper_1e2ox_413 {
@@ -1265,8 +1277,13 @@
 	gap: var(--spacing-1);
 	padding: var(--spacing-1);
 	z-index: 1;
-	background-color: var(--baseBase);
 	border-bottom-left-radius: var(--radius-base);
+	opacity: 0;
+	transition: opacity 0.2s ease-in-out;
+}
+
+._imageWrapper_1e2ox_920:hover ._editImageToolbar_1e2ox_933 {
+	opacity: 1;
 }
 
 ._editImageButton_1e2ox_937 svg {
@@ -1596,7 +1613,7 @@ form._multiFieldForm_1e2ox_1214 ._formField_1e2ox_1220 label {
 
 ._popupContainer_1e2ox_1240 {
 	position: relative;
-	z-index: 2;
+	z-index: 200;
 }
 
 ._inputSizer_1e2ox_1245 {
@@ -1976,7 +1993,7 @@ form._multiFieldForm_1e2ox_1214 ._formField_1e2ox_1220 label {
 ._code_1tncs_52 {
 	background-color: var(--baseBg);
 	padding: 1px 0.25rem;
-	font-family: var(--font-mono);
+	font-family: var(--font-monospace);
 	font-size: 94%;
 }
 

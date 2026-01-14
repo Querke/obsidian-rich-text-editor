@@ -125,13 +125,6 @@ export const MarkdownEditorView = (props: Props) => {
 
 	const isDark = document.body.classList.contains("theme-dark");
 
-	const cmFontTheme = EditorView.theme({
-		"&": {
-			fontFamily: "Liberation Mono, Courier New, monospace",
-			fontSize: "14px",
-		},
-	});
-
 	return (
 		<div ref={hostRef} className="react-root">
 			<MDXEditor
@@ -210,9 +203,7 @@ export const MarkdownEditorView = (props: Props) => {
 							lua: "Lua",
 						},
 
-						codeMirrorExtensions: isDark
-							? [oneDark, cmFontTheme]
-							: [cmFontTheme],
+						codeMirrorExtensions: isDark ? [oneDark] : [],
 					}),
 				]}
 			/>
