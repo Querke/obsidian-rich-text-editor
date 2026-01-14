@@ -6,6 +6,41 @@ li[role="checkbox"]:focus,
 li[role="checkbox"]:focus-within {
 	outline: none;
 }
+.mdxeditor-popup-container {
+	position: fixed !important;
+	top: 0;
+	left: 0;
+	width: 100vw;
+	height: 100vh;
+	pointer-events: none; /* Let clicks pass through the wrapper */
+	z-index: 99999 !important;
+}
+
+/* Re-enable clicks on the actual dialog content */
+.mdxeditor-popup-container > div {
+	pointer-events: auto;
+}
+
+div[data-radix-popper-content-wrapper]:has(
+		[class*="linkDialogPopoverContent"]
+	) {
+	/* Override the broken 'translate(1245px...)' inline style */
+	transform: none !important;
+
+	/* Dock it to the top-center of the editor view */
+	position: absolute !important;
+	top: 50% !important; /* Adjust based on your toolbar height */
+	left: 50% !important;
+
+	/* Center align it horizontally */
+	translate: -50% -50% !important;
+
+	/* Ensure it sits above everything else */
+	z-index: 1000 !important;
+
+	/* Optional: Add a little animation so it feels deliberate */
+	animation: slideDown 0.2s ease-out;
+}
 
 .mdxeditor ._codeMirrorWrapper_1e2ox_392 {
 	overflow: visible;
