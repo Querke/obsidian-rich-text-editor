@@ -1,9 +1,9 @@
 // main.ts
 import { Plugin, WorkspaceLeaf } from "obsidian";
-import { ExampleView, VIEW_TYPE_EXAMPLE } from "./ExampleView";
+import { ExampleView, VIEW_TYPE_EXAMPLE } from "./src/ExampleView";
 
-import "./view.css";
-import "./mdxeditor.css";
+import "./src/view.css";
+import "./src/mdxeditor.css";
 
 export default class HelloWorldPlugin extends Plugin {
 	private isDarkTheme: boolean | null = null;
