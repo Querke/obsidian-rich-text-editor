@@ -61,15 +61,21 @@ export const RichTextEditor = (props: Props) => {
 			const root = hostRef.current?.querySelector(
 				".mdxeditor"
 			) as HTMLElement;
-			const toolbar = root?.querySelector('[role="toolbar"]');
 
-			if (toolbar) {
+			// Get the container
+			const contentEditor = root?.querySelector(
+				".mdxeditor-root-contenteditable"
+			);
+			// Get the specific first child element
+			const targetChild = contentEditor?.firstElementChild;
+
+			if (targetChild) {
 				let bar = root.querySelector(".custom-titlebar") as HTMLElement;
 				if (!bar) {
 					bar = document.createElement("div");
 					bar.className = "custom-titlebar";
-					// Inject the empty DIV into the DOM
-					toolbar.insertAdjacentElement("afterend", bar);
+					// Inject at the start of the first child element
+					targetChild.prepend(bar);
 				}
 
 				// Save this DOM element to state
@@ -118,6 +124,8 @@ export const RichTextEditor = (props: Props) => {
 
 		const handleSave = async () => {
 			// 1. Don't trigger if nothing changed
+			console.log("trying to rename to ", value.trim());
+
 			if (value.trim() === props.title) return;
 
 			// 2. Call the rename function and wait for the result
@@ -126,6 +134,8 @@ export const RichTextEditor = (props: Props) => {
 			// 3. If rename failed (returned false), revert the input to the old title
 			if (!success) {
 				setValue(props.title);
+			} else {
+				setValue(value);
 			}
 		};
 

@@ -1,111 +1,76 @@
-// main.ts
-import { ItemView, Plugin, WorkspaceLeaf } from "obsidian";
-import {
-	RichTextPluginView,
-	VIEW_TYPE_RICH_TEXT,
-} from "./src/RichTextPluginView";
-
-import "./src/mdxeditor.css";
+import { Plugin, MarkdownView, WorkspaceLeaf, ItemView } from "obsidian";
+import { RichTextOverlay } from "./src/RichTextOverlay";
 import "./src/view.css";
+import "./src/mdxeditor.css";
 
 interface RichTextPluginSettings {
 	isDefaultEditor: boolean;
 }
-
-const DEFAULT_SETTINGS: RichTextPluginSettings = {
-	isDefaultEditor: true,
-};
+const DEFAULT_SETTINGS: RichTextPluginSettings = { isDefaultEditor: true };
 
 export default class RichTextPlugin extends Plugin {
-	private isDarkTheme: boolean | null = null;
-
 	settings: RichTextPluginSettings;
 
+	// Track which leaves we have already injected into
+	private overlays = new WeakMap<WorkspaceLeaf, RichTextOverlay>();
+
 	async onload() {
-		await this.loadSettings(); // Load saved preference
+		await this.loadSettings();
 
-		this.registerView(
-			VIEW_TYPE_RICH_TEXT,
-			(leaf: WorkspaceLeaf) => new RichTextPluginView(leaf, this)
-		);
-
-		// HACK: Inject "Switch to Rich Text" button into standard Markdown views
-		this.registerEvent(
-			this.app.workspace.on("active-leaf-change", (leaf) => {
-				if (leaf) this.addSwitchButton(leaf);
-			})
-		);
-
-		// Also inject into any currently open leaves (e.g. on startup)
-		this.app.workspace.iterateAllLeaves((leaf) => {
-			this.addSwitchButton(leaf);
-		});
-
-		// Command to Manually Toggle
 		this.addCommand({
 			id: "toggle-rich-text",
-			name: "Toggle Rich Text / Markdown",
+			name: "Toggle mode",
 			callback: () => {
 				const leaf = this.app.workspace.getLeaf(false);
-				if (leaf) this.manualToggle(leaf);
+				if (leaf) this.toggleMode(leaf);
 			},
 		});
 
-		// AUTO-SWITCH LOGIC
-		const checkAndReplace = async (leaf: WorkspaceLeaf | null) => {
-			// 1. Basic checks
-			if (!this.settings.isDefaultEditor || !leaf) return;
-
-			// 2. Strict Check: Is this a Markdown View?
-			// If getViewType returns "markdown", the view is ready. No timeout needed.
-			if (leaf.view.getViewType() === "markdown") {
-				console.log("replacing");
-				const file = (leaf.view as any).file; // MarkdownView has a .file property
-				if (file && file.extension === "md") {
-					await leaf.setViewState({
-						type: VIEW_TYPE_RICH_TEXT,
-						state: { file: file.path },
-					});
-				}
-			}
-		};
-
-		// Event 1: When navigating to a file (Same tab)
-		this.registerEvent(
-			this.app.workspace.on("file-open", () => {
-				console.log("file open");
-
-				checkAndReplace(this.app.workspace.getLeaf(false));
-			})
-		);
-
-		// Event 2: When switching tabs or opening new splits
+		// 2. Injector: Watch for any leaf change (new tab, switch tab, etc.)
 		this.registerEvent(
 			this.app.workspace.on("active-leaf-change", (leaf) => {
-				console.log("on active lead change");
-
-				checkAndReplace(leaf);
+				if (leaf) {
+					this.injectOverlay(leaf);
+					this.addSwitchButton(leaf);
+				}
 			})
 		);
 
-		this.isDarkTheme = document.body.classList.contains("theme-dark");
+		// 3. Initial Check: Inject into currently open leaves
+		this.app.workspace.iterateAllLeaves((leaf) => {
+			this.injectOverlay(leaf);
+			this.addSwitchButton(leaf);
+		});
+
 		this.registerEvent(
 			this.app.workspace.on("css-change", () => {
-				const isDark = document.body.classList.contains("theme-dark");
-
-				if (this.isDarkTheme !== isDark) {
-					this.isDarkTheme = isDark;
-				}
+				// Update every active overlay
+				this.app.workspace.iterateAllLeaves((leaf) => {
+					if (this.overlays.has(leaf)) {
+						this.overlays.get(leaf)?.updateReadableLineLength();
+					}
+				});
 			})
 		);
 	}
 
 	onunload() {
-		this.app.workspace.detachLeavesOfType(VIEW_TYPE_RICH_TEXT);
+		// Cleanup: Remove all our overlays
+		this.app.workspace.iterateAllLeaves((leaf) => {
+			const overlay = this.overlays.get(leaf);
+			if (overlay) {
+				if (leaf.view.getViewType() != "markdown") {
+					return;
+				}
+
+				const container = (leaf.view as ItemView).contentEl;
+				overlay.destroy();
+				container.removeClass("is-rich-text-mode");
+			}
+		});
 	}
 
-	private addSwitchButton(leaf: WorkspaceLeaf) {
-		// Only target standard Markdown views
+	addSwitchButton(leaf: WorkspaceLeaf) {
 		if (leaf.view.getViewType() === "markdown") {
 			// Check a custom flag to prevent duplicate buttons
 			if ((leaf.view as any).__hasRichTextSwitch) return;
@@ -115,7 +80,7 @@ export default class RichTextPlugin extends Plugin {
 				"pencil",
 				"Switch to Rich Text",
 				() => {
-					this.manualToggle(leaf);
+					this.toggleMode(leaf);
 				}
 			);
 
@@ -124,41 +89,50 @@ export default class RichTextPlugin extends Plugin {
 		}
 	}
 
-	async manualToggle(leaf: WorkspaceLeaf) {
-		const currentView = leaf.view.getViewType();
-		const file = this.app.workspace.getActiveFile();
-		if (!file) return;
+	injectOverlay(leaf: WorkspaceLeaf) {
+		if (leaf.view.getViewType() !== "markdown") return;
+		if (!(leaf.view instanceof MarkdownView)) return;
 
-		if (currentView === "markdown") {
-			// Switch TO Rich Text -> Enable & Save Setting
-			this.settings.isDefaultEditor = true;
-			await this.saveSettings();
+		// If overlay exists, just UPDATE it (Load new text) and show it
+		if (this.overlays.has(leaf)) {
+			const overlay = this.overlays.get(leaf);
+			overlay?.render(); // <--- NEW: Force update
+			this.updateVisibility(leaf);
+			return;
+		}
 
-			await leaf.setViewState({
-				type: VIEW_TYPE_RICH_TEXT,
-				state: { file: file.path },
-			});
+		const overlay = new RichTextOverlay(leaf.view);
+		this.overlays.set(leaf, overlay);
+
+		// Set initial state
+		this.updateVisibility(leaf);
+	}
+
+	toggleMode(leaf: WorkspaceLeaf) {
+		this.settings.isDefaultEditor = !this.settings.isDefaultEditor;
+		this.saveSettings();
+		this.updateVisibility(leaf);
+	}
+
+	updateVisibility(leaf: WorkspaceLeaf) {
+		// Fix: Cast to ItemView to access contentEl
+		if (leaf.view.getViewType() != "markdown") {
+			return;
+		}
+
+		const container = (leaf.view as ItemView).contentEl;
+		const overlay = this.overlays.get(leaf);
+
+		if (this.settings.isDefaultEditor) {
+			console.log("adding class");
+			container.addClass("is-rich-text-mode");
+			overlay?.toggleScope(true);
 		} else {
-			// Switch BACK TO Markdown -> Disable & Save Setting
-			this.settings.isDefaultEditor = false;
-
-			await this.saveSettings();
-
-			await leaf.setViewState({
-				type: "markdown",
-				state: { file: file.path },
-			});
-
-			// Re-inject the button immediately after switching back
-			// (Wait 1 tick for the new view to initialize)
-			setTimeout(() => {
-				const newLeaf = this.app.workspace.getLeaf(false);
-				if (newLeaf) this.addSwitchButton(newLeaf);
-			}, 50);
+			container.removeClass("is-rich-text-mode");
+			overlay?.toggleScope(false);
 		}
 	}
 
-	// --- NEW CODE START ---
 	async loadSettings() {
 		this.settings = Object.assign(
 			{},
@@ -166,9 +140,11 @@ export default class RichTextPlugin extends Plugin {
 			await this.loadData()
 		);
 	}
-
 	async saveSettings() {
 		await this.saveData(this.settings);
+		// Refresh all active leaves to reflect new setting
+		this.app.workspace.iterateAllLeaves((leaf) =>
+			this.updateVisibility(leaf)
+		);
 	}
-	// --- NEW CODE END ---
 }

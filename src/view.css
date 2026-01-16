@@ -1,5 +1,70 @@
 /* ---------------------------------------------------------------------------- */
 
+/* 1. Hide Standard Obsidian Editors when mode is active */
+/* The class is on .view-content, so we look for children inside it */
+.view-content.is-rich-text-mode .markdown-source-view,
+.view-content.is-rich-text-mode .markdown-reading-view {
+	display: none !important;
+}
+
+/* 2. Show Custom Overlay when mode is active */
+.view-content.is-rich-text-mode .rich-text-overlay {
+	display: flex !important;
+}
+
+/* --- OVERLAY LAYOUT --- */
+
+/* Default State: Hidden */
+.rich-text-overlay {
+	display: none;
+	background-color: var(--background-primary);
+	height: 100%;
+	width: 100%;
+	flex-direction: column;
+	overflow: hidden; /* Prevent double scrollbars */
+}
+
+/* Ensure React Root fills the space */
+.rich-text-overlay .react-root {
+	height: 100%;
+	width: 100%;
+	display: flex;
+	flex-direction: column;
+}
+
+/* Ensure Editor fills the space */
+.rich-text-overlay .mdxeditor {
+	flex: 1; /* Take remaining height */
+	overflow: auto; /* Internal scrolling */
+	display: flex;
+	flex-direction: column;
+}
+
+/* Make the editable area take available space */
+.mdxeditor-root-contenteditable {
+	flex-grow: 1;
+	overflow-y: auto;
+}
+
+.rich-text-overlay.is-readable-line-width
+	.mdxeditor-root-contenteditable
+	> :first-child {
+	/* Use Obsidian's configured line width */
+	max-width: var(--file-line-width);
+
+	/* Center the editor */
+	margin: 0 auto;
+
+	/* Ensure it doesn't touch edges on small screens */
+	width: 100%;
+}
+
+.rich-text-overlay.is-readable-line-width .mdxeditor-toolbar {
+	justify-content: center;
+}
+
+/* ---------------------------------------------------------------------------- */
+
 blockquote {
 	/* 1. Define the vertical line: width, style, and color */
 	border-left: 2px solid var(--interactive-accent);
@@ -9,12 +74,6 @@ blockquote {
 
 	/* Optional: A bit of margin for visual separation */
 	margin: 1.5rem 0;
-}
-
-/* fill height chain */
-.rich-text-view-root,
-.rich-text-view-root .react-root {
-	height: 100%;
 }
 
 /* make MDXEditor flex and stop growing with content */
@@ -45,8 +104,7 @@ blockquote {
 }
 
 .custom-titlebar {
-	padding: var(--spacing-3); /* Match editor side padding */
-	padding-bottom: 0;
+	padding-left: 12px;
 }
 
 .custom-title-input {
@@ -69,19 +127,4 @@ blockquote {
 	font-variant: var(--inline-title-variant);
 	font-family: var(--inline-title-font);
 	letter-spacing: -0.015em;
-}
-
-/* 1. Center the Editor Content */
-.rich-text-view-root.is-readable-line-width .mxeditor-content-editable {
-	max-width: var(--file-line-width);
-	width: 100%;
-	margin: 0 auto; /* Center it */
-}
-
-/* 2. Center the Title Input as well */
-.rich-text-view-root.is-readable-line-width .custom-title-input {
-	max-width: var(--file-line-width);
-	width: 100%;
-	margin: 0 auto;
-	display: block; /* Ensure margin auto works */
 }

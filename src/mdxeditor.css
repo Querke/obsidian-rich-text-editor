@@ -1669,7 +1669,8 @@ mark {
 	border-bottom-right-radius: var(--radius-medium);
 }
 
-._textInput_1e2ox_1206 {
+._textInput_1e2ox_1206,
+input[type="text"] {
 	all: unset;
 	border-radius: var(--radius-base);
 	border: 1px solid var(--baseBorder);
