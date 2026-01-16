@@ -50,6 +50,10 @@ export const RichTextEditor = (props: Props) => {
 	const isDark = document.body.classList.contains("theme-dark");
 
 	useEffect(() => {
+		editorRef.current?.setMarkdown(props.text);
+	}, [props.text]);
+
+	useEffect(() => {
 		if (!hostRef.current) return;
 
 		// Wait for MDXEditor to render
@@ -74,18 +78,36 @@ export const RichTextEditor = (props: Props) => {
 		}, 0);
 	}, []);
 
+	useEffect(() => {
+		if (!hostRef.current) return;
+
+		const enableMobileFeatures = () => {
+			const editable = hostRef.current?.querySelector(
+				".mxeditor-content-editable"
+			);
+			if (editable) {
+				// Force iOS to Capitalize the first letter of sentences
+				editable.setAttribute("autocapitalize", "sentences");
+			}
+		};
+
+		// Run quickly after mount to override defaults
+		setTimeout(enableMobileFeatures, 100);
+	}, []);
+
 	const handleContentChange = (newMarkdown: string) => {
 		props.onSave(newMarkdown);
 	};
 
 	function focusEditor(e: React.MouseEvent<HTMLDivElement>): void {
-		if (
-			(e.target as HTMLElement).classList.contains("custom-title-input")
-		) {
-			return;
-		}
+		const target = e.target as HTMLElement;
 
-		editorRef.current?.focus();
+		// Check if the clicked element has the specific class
+		if (target.classList.contains("mdxeditor-root-contenteditable")) {
+			console.log("focus");
+
+			editorRef.current?.focus();
+		}
 	}
 
 	const TitleBar = () => {

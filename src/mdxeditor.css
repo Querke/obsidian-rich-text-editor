@@ -36,17 +36,63 @@ div[data-radix-popper-content-wrapper]:has(
 
 	/* Dock it to the top-center of the editor view */
 	position: absolute !important;
-	top: 50% !important; /* Adjust based on your toolbar height */
+	top: 62px !important; /* Adjust based on your toolbar height */
 	left: 50% !important;
 
 	/* Center align it horizontally */
-	translate: -50% -50% !important;
+	translate: -50% 0% !important;
 
 	/* Ensure it sits above everything else */
 	z-index: 1000 !important;
 
 	/* Optional: Add a little animation so it feels deliberate */
 	animation: slideDown 0.2s ease-out;
+}
+div[class*="linkDialogPopoverContent"] {
+	/* Set width to 400px, OR 90% of the screen if the screen is smaller */
+	width: min(400px, 90vw) !important;
+	max-width: 90vw !important;
+
+	/* Ensure padding doesn't expand width */
+	box-sizing: border-box !important;
+}
+
+/* 2. Ensure the form inside fills that width */
+form[class*="multiFieldForm"] {
+	width: 100% !important;
+	max-width: 100% !important;
+}
+
+/* 3. Force Inputs to shrink (Override size="40") */
+div[class*="linkDialogPopoverContent"] input {
+	width: 100% !important; /* Fill the container */
+	max-width: 100% !important; /* Never exceed container */
+	min-width: 0 !important; /* Allow shrinking below default browser input size */
+	box-sizing: border-box !important;
+}
+
+div[class*="_dialogContent_"] {
+	top: 62px !important;
+	translate: 0 50% !important;
+
+	/* "Be 500px wide, unless the screen is smaller, then be 90% of the screen" */
+	width: min(500px, 90vw) !important;
+
+	/* Ensure flex column layout (from previous step) */
+	display: flex !important;
+	flex-direction: column !important;
+	gap: var(--size-4-2);
+}
+
+div[class*="_formField_"] {
+	width: 100% !important;
+}
+
+div[class*="_dialogContent_"] input {
+	width: 100% !important; /* Fill the container */
+	max-width: 100% !important; /* Never overflow */
+	box-sizing: border-box !important; /* internal padding doesn't add to width */
+	min-width: 0 !important; /* Allow shrinking below default size */
 }
 
 .mdxeditor ._codeMirrorWrapper_1e2ox_392 {
@@ -772,6 +818,14 @@ mark {
 	background-color: var(--basePageBg);
 	padding: var(--spacing-1) var(--spacing-1);
 	font-size: var(--text-sm);
+
+	max-width: 350px !important;
+	width: auto !important;
+}
+
+._dialogContent_1e2ox_603 input {
+	max-width: 100%;
+	min-width: 0; /* Allows flex items to shrink below content size */
 }
 
 ._largeDialogContent_1e2ox_615 {
