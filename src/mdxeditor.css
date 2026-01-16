@@ -497,7 +497,6 @@ mark {
 	width: 100%;
 	color: var(--baseTextContrast);
 
-	padding: var(--spacing-3);
 	padding-top: 0;
 }
 

@@ -103,10 +103,6 @@ blockquote {
 	flex-direction: column;
 }
 
-.custom-titlebar {
-	padding-left: 12px;
-}
-
 .custom-title-input {
 	/* 1. Remove default Input styles */
 	background: transparent;

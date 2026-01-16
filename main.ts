@@ -1,4 +1,4 @@
-import { Plugin, MarkdownView, WorkspaceLeaf, ItemView } from "obsidian";
+import { Plugin, MarkdownView, WorkspaceLeaf, ItemView, TFile } from "obsidian";
 import { RichTextOverlay } from "./src/RichTextOverlay";
 import "./src/view.css";
 import "./src/mdxeditor.css";
@@ -42,6 +42,29 @@ export default class RichTextPlugin extends Plugin {
 			this.addSwitchButton(leaf);
 		});
 
+		// add toggle to file menu select
+		this.registerEvent(
+			this.app.workspace.on("file-menu", (menu, file, source, leaf) => {
+				// Check if it's a markdown file
+				if (file instanceof TFile && file.extension === "md") {
+					// We simply add a checkable item.
+					// Note: It will appear at the bottom of the menu (standard plugin behavior).
+					menu.addItem((item) => {
+						item.setTitle("Rich text mode")
+							.setChecked(this.settings.isDefaultEditor) // <-- Makes it a toggle
+							.onClick(() => {
+								// Use the specific leaf if clicked from header, otherwise active leaf
+								const targetLeaf =
+									leaf || this.app.workspace.getLeaf(false);
+								if (targetLeaf) {
+									this.toggleMode(targetLeaf);
+								}
+							});
+					});
+				}
+			})
+		);
+
 		this.registerEvent(
 			this.app.workspace.on("css-change", () => {
 				// Update every active overlay
@@ -77,7 +100,7 @@ export default class RichTextPlugin extends Plugin {
 
 			// FIX: Cast to ItemView to access addAction
 			(leaf.view as ItemView).addAction(
-				"pencil",
+				"sparkles",
 				"Switch to Rich Text",
 				() => {
 					this.toggleMode(leaf);
