@@ -111,7 +111,8 @@ export class RichTextOverlay {
 					title={file?.basename || "Untitled"}
 					text={initialText}
 					onSave={(newText) => {
-						this.view.editor.setValue(newText);
+						const cleanText = newText.replace(/&#x20;/g, "");
+						this.view.editor.setValue(cleanText);
 						this.view.requestSave();
 					}}
 					// Simple rename handler
