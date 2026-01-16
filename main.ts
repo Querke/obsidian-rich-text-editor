@@ -96,7 +96,7 @@ export default class RichTextPlugin extends Plugin {
 		// If overlay exists, just UPDATE it (Load new text) and show it
 		if (this.overlays.has(leaf)) {
 			const overlay = this.overlays.get(leaf);
-			overlay?.render(); // <--- NEW: Force update
+			overlay?.update(); // <--- NEW: Force update
 			this.updateVisibility(leaf);
 			return;
 		}
@@ -124,8 +124,9 @@ export default class RichTextPlugin extends Plugin {
 		const overlay = this.overlays.get(leaf);
 
 		if (this.settings.isDefaultEditor) {
-			console.log("adding class");
 			container.addClass("is-rich-text-mode");
+
+			overlay?.update();
 			overlay?.toggleScope(true);
 		} else {
 			container.removeClass("is-rich-text-mode");

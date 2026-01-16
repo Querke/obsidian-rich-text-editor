@@ -1,7 +1,7 @@
 import { EventRef, MarkdownView, Notice, Scope, TFile } from "obsidian";
+import { StrictMode } from "react";
 import { createRoot, Root } from "react-dom/client";
-import { StrictMode, useEffect, useState } from "react";
-import { RichTextEditor } from "./RichTextEditor";
+import { RichTextEditor, RichTextEditorRef } from "./RichTextEditor";
 
 export class RichTextOverlay {
 	private root: Root | null = null;
@@ -11,6 +11,7 @@ export class RichTextOverlay {
 	private parentScope: Scope | null = null;
 
 	private renameRef: EventRef;
+	private editorRef: RichTextEditorRef | null = null;
 
 	constructor(private view: MarkdownView) {
 		// Create the container inside the view's content element
@@ -28,9 +29,9 @@ export class RichTextOverlay {
 		// Insert it BEFORE the standard editor so it sits at the top level
 		this.view.contentEl.appendChild(this.container);
 
-		this.renameRef = this.view.app.vault.on("rename", (file) => {
+		this.renameRef = this.view.app.vault.on("rename", (file: TFile) => {
 			if (file === this.view.file && this.root !== null) {
-				this.render();
+				this.editorRef?.setTitle(file.basename);
 			}
 		});
 
@@ -68,10 +69,21 @@ export class RichTextOverlay {
 		this.render();
 	}
 
+	update() {
+		if (this.editorRef) {
+			const newText = this.view.editor.getValue();
+			this.editorRef.setMarkdown(newText);
+			this.editorRef.setTitle(this.view.file?.basename || "Untitled");
+		} else {
+			this.render();
+		}
+	}
+
 	render() {
 		if (!this.root) return;
 
 		let initialText = this.view.editor.getValue();
+
 		const file = this.view.file;
 
 		const handleRename = async (nextBaseName: string): Promise<boolean> => {
@@ -82,9 +94,6 @@ export class RichTextOverlay {
 			const newPath = dir + nextBaseName + "." + file.extension;
 
 			try {
-				// Just rename. Obsidian automatically updates 'file' for us.
-				console.log("rename file", newPath);
-
 				await this.view.app.fileManager.renameFile(file, newPath);
 				return true;
 			} catch (e) {
@@ -96,6 +105,9 @@ export class RichTextOverlay {
 		this.root.render(
 			<StrictMode>
 				<RichTextEditor
+					ref={(node) => {
+						this.editorRef = node;
+					}}
 					title={file?.basename || "Untitled"}
 					text={initialText}
 					onSave={(newText) => {
