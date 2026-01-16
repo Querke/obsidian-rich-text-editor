@@ -116,18 +116,27 @@ export default class RichTextPlugin extends Plugin {
 		if (leaf.view.getViewType() !== "markdown") return;
 		if (!(leaf.view instanceof MarkdownView)) return;
 
-		// If overlay exists, just UPDATE it (Load new text) and show it
-		if (this.overlays.has(leaf)) {
-			const overlay = this.overlays.get(leaf);
-			overlay?.update(); // <--- NEW: Force update
+		let overlay = this.overlays.get(leaf);
+
+		// BUG FIX: Check if the overlay is attached to a dead view
+		// If the Leaf is the same, but the View instance changed, our overlay is stale.
+		if (overlay && overlay.view !== leaf.view) {
+			overlay.destroy();
+			this.overlays.delete(leaf);
+			overlay = undefined;
+		}
+
+		// If we have a valid, living overlay, reuse it
+		if (overlay) {
+			overlay.update();
 			this.updateVisibility(leaf);
 			return;
 		}
 
-		const overlay = new RichTextOverlay(leaf.view);
+		// Otherwise, create a fresh one for the new View
+		overlay = new RichTextOverlay(leaf.view);
 		this.overlays.set(leaf, overlay);
 
-		// Set initial state
 		this.updateVisibility(leaf);
 	}
 

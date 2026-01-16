@@ -13,7 +13,7 @@ export class RichTextOverlay {
 	private renameRef: EventRef;
 	private editorRef: RichTextEditorRef | null = null;
 
-	constructor(private view: MarkdownView) {
+	constructor(public view: MarkdownView) {
 		// Create the container inside the view's content element
 		this.container = document.createElement("div");
 		// Check if the container already contains the Rich Text Overlay
