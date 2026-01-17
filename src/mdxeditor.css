@@ -1,8 +1,28 @@
-/* Prevent images from overflowing the editor width */
 .mxeditor-content-editable img {
 	height: auto; /* Maintain aspect ratio */
 	display: block; /* Prevents tiny whitespace at the bottom */
 	max-width: min(100%, var(--file-line-width));
+}
+
+/* Tight paragraphs (Obsidian-like) */
+.mxeditor-content-editable p {
+	margin: 0.75rem !important;
+	line-height: 1.25rem !important;
+}
+
+/* Optional: reduce block spacing generally */
+.mxeditor-content-editable :where(ul, ol, li, blockquote) {
+	margin-block: 0.75rem !important;
+	line-height: 1.25rem !important;
+}
+
+.mxeditor-content-editable h1,
+.mxeditor-content-editable h2,
+.mxeditor-content-editable h3,
+.mxeditor-content-editable h4,
+.mxeditor-content-editable h5,
+.mxeditor-content-editable h6 {
+	margin-bottom: 0 !important;
 }
 
 .mdxeditor .cm-editor .cm-content {

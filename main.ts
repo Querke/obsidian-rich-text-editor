@@ -1,4 +1,11 @@
-import { Plugin, MarkdownView, WorkspaceLeaf, ItemView, TFile } from "obsidian";
+import {
+	Plugin,
+	MarkdownView,
+	WorkspaceLeaf,
+	ItemView,
+	TFile,
+	setIcon,
+} from "obsidian";
 import { RichTextOverlay } from "./src/RichTextOverlay";
 import "./src/view.css";
 import "./src/mdxeditor.css";
@@ -99,13 +106,16 @@ export default class RichTextPlugin extends Plugin {
 			if ((leaf.view as any).__hasRichTextSwitch) return;
 
 			// FIX: Cast to ItemView to access addAction
-			(leaf.view as ItemView).addAction(
-				"sparkles",
+			const switchAction = (leaf.view as ItemView).addAction(
+				"candy",
 				"Switch to Rich Text",
 				() => {
 					this.toggleMode(leaf);
 				}
 			);
+
+			(leaf.view as any).__richTextSwitchAction = switchAction;
+			this.updateSwitchButtonIcon(leaf);
 
 			// Mark this view as having the button
 			(leaf.view as any).__hasRichTextSwitch = true;
@@ -164,6 +174,19 @@ export default class RichTextPlugin extends Plugin {
 			container.removeClass("is-rich-text-mode");
 			overlay?.toggleScope(false);
 		}
+
+		this.updateSwitchButtonIcon(leaf);
+	}
+
+	updateSwitchButtonIcon(leaf: WorkspaceLeaf) {
+		const action = (leaf.view as any).__richTextSwitchAction as
+			| HTMLElement
+			| undefined;
+
+		if (!action) return;
+
+		const icon = this.settings.isDefaultEditor ? "candy-off" : "candy";
+		setIcon(action, icon);
 	}
 
 	async loadSettings() {
