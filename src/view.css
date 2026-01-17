@@ -62,7 +62,7 @@
 .rich-text-overlay.is-mobile .mdxeditor-toolbar {
 	position: fixed;
 	top: auto !important;
-	bottom: env(safe-area-inset-bottom, 0px) !important;
+	bottom: 0 !important;
 	left: 0;
 	right: 0;
 	margin: 0;
@@ -107,7 +107,7 @@
 
 .rich-text-overlay.is-readable-line-width .mdxeditor-toolbar {
 	/* justify-content: center; */
-	max-width: 824px;
+	max-width: 788px;
 	margin: 0 auto;
 	width: 100%;
 }

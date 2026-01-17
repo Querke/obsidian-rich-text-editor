@@ -74,10 +74,53 @@ export class RichTextOverlay {
 		this.render();
 	}
 
+	mdxToObsidian = (text: string) => {
+		return (
+			text
+				.replace(/&#x20;/g, " ")
+				.replace(/\r\n/g, "\n")
+				// halve newline runs: 2 -> 1, 4 -> 2, 6 -> 3, etc.
+				.replace(/\n{2,}/g, (m) =>
+					"\n".repeat(Math.floor(m.length / 2))
+				)
+		);
+	};
+
+	obsidianToMdx = (obsidian: string) => {
+		const normalized = obsidian.replace(/\r\n/g, "\n");
+		const lines = normalized.split("\n");
+
+		const paragraphs: string[] = [];
+
+		for (let i = 0; i < lines.length; i++) {
+			const line = lines[i];
+
+			// Empty line => intentional blank line paragraph marker
+			if (line.length === 0) {
+				paragraphs.push("&#x20;");
+				continue;
+			}
+
+			// Preserve trailing spaces by encoding them
+			const withTrailingSpaces = line.replace(/[ ]+$/g, (m) => {
+				return "&#x20;".repeat(m.length);
+			});
+
+			paragraphs.push(withTrailingSpaces);
+		}
+
+		return paragraphs.join("\n\n");
+	};
+
 	update() {
 		if (this.editorRef) {
 			const newText = this.view.editor.getValue();
-			this.editorRef.setMarkdown(newText);
+
+			// const cleanText = newText.replace(/[ ]+(?=\n|$)/g, (m) => {
+			// 	return "&#x20;".repeat(m.length);
+			// });
+			const cleanText = this.obsidianToMdx(newText);
+			this.editorRef.setMarkdown(cleanText);
 			this.editorRef.setTitle(this.view.file?.basename || "Untitled");
 		} else {
 			this.render();
@@ -87,7 +130,7 @@ export class RichTextOverlay {
 	render() {
 		if (!this.root) return;
 
-		let initialText = this.view.editor.getValue();
+		let initialText = this.obsidianToMdx(this.view.editor.getValue());
 
 		const file = this.view.file;
 
@@ -116,7 +159,7 @@ export class RichTextOverlay {
 					title={file?.basename || "Untitled"}
 					text={initialText}
 					onSave={(newText) => {
-						const cleanText = newText.replace(/&#x20;/g, "");
+						const cleanText = this.mdxToObsidian(newText);
 						this.view.editor.setValue(cleanText);
 						this.view.requestSave();
 					}}

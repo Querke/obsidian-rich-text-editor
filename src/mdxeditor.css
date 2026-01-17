@@ -6,14 +6,14 @@
 
 /* Tight paragraphs (Obsidian-like) */
 .mxeditor-content-editable p {
-	margin: 0.75rem !important;
-	line-height: 1.25rem !important;
+	margin: 0rem !important;
+	line-height: 1.5rem !important;
 }
 
 /* Optional: reduce block spacing generally */
 .mxeditor-content-editable :where(ul, ol, li, blockquote) {
-	margin-block: 0.75rem !important;
-	line-height: 1.25rem !important;
+	margin-block: 0rem !important;
+	line-height: 1.5rem !important;
 }
 
 .mxeditor-content-editable h1,

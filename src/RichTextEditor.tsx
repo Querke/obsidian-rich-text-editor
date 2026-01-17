@@ -169,8 +169,9 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 					// Save when user hits Enter
 					onKeyDown={(e) => {
 						if (e.key === "Enter") {
+							e.preventDefault();
 							handleSave();
-							e.currentTarget.blur(); // Remove focus from input
+							editorRef.current?.focus();
 						}
 					}}
 				/>
@@ -194,17 +195,14 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 							toolbarContents: () => (
 								<>
 									<UndoRedo />
-									<Separator />
 									<BoldItalicUnderlineToggles />
+									<ListsToggle />
+									<BlockTypeSelect />
 									<StrikeThroughSupSubToggles />
 									<HighlightToggle />
 									<CodeToggle />
 									<InsertCodeBlock />
 									<InsertThematicBreak />
-									<BlockTypeSelect />
-									<Separator />
-									<ListsToggle />
-									<Separator />
 									<CreateLink />
 									<InsertImage />
 									<InsertTable />
