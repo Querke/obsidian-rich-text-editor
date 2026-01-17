@@ -1,3 +1,18 @@
+.rich-text-overlay.is-mobile .custom-titlebar {
+	/* Use padding so we don't push the container off-screen */
+	padding-top: 132px !important;
+
+	/* If you strictly need margin, you must calculate height: */
+	/* margin-top: 128px !important; */
+	/* height: calc(100% - 128px) !important; */
+}
+
+.rich-text-overlay {
+	max-width: 100vw;
+	padding-left: 24px;
+	padding-right: 24px;
+}
+
 /* ---------------------------------------------------------------------------- */
 
 /* 1. Hide Standard Obsidian Editors when mode is active */
@@ -40,6 +55,36 @@
 	flex-direction: column;
 }
 
+.rich-text-overlay.is-mobile .mdxeditor {
+	padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+}
+
+.rich-text-overlay.is-mobile .mdxeditor-toolbar {
+	position: fixed;
+	top: auto;
+	bottom: env(safe-area-inset-bottom, 0px);
+	left: 0;
+	right: 0;
+	margin: 0;
+	padding-inline: var(--spacing-3);
+	background-color: var(--background-primary);
+	max-height: 72px;
+	min-height: 48px;
+	box-shadow: 0 -2px 16px rgba(0, 0, 0, 0.25);
+	border-radius: 0;
+	opacity: 0;
+	transform: translateY(6px);
+	pointer-events: none;
+	transition: opacity 0.25s ease, transform 0.25s ease;
+	z-index: 50;
+}
+
+.rich-text-overlay.is-mobile .mdxeditor:focus-within .mdxeditor-toolbar {
+	opacity: 1;
+	transform: translateY(0);
+	pointer-events: auto;
+}
+
 /* Make the editable area take available space */
 .mdxeditor-root-contenteditable {
 	flex-grow: 1;
@@ -60,7 +105,10 @@
 }
 
 .rich-text-overlay.is-readable-line-width .mdxeditor-toolbar {
-	justify-content: center;
+	/* justify-content: center; */
+	max-width: 824px;
+	margin: 0 auto;
+	width: 100%;
 }
 
 /* ---------------------------------------------------------------------------- */

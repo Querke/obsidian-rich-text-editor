@@ -415,6 +415,7 @@ mark {
 ._toolbarNodeKindSelectTrigger_1e2ox_306,
 ._toolbarButtonSelectTrigger_1e2ox_307,
 ._selectTrigger_1e2ox_308 {
+	all: unset;
 	border: 0;
 	background-color: transparent;
 	display: flex;

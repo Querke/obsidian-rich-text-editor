@@ -26,6 +26,11 @@ export class RichTextOverlay {
 
 		this.container.addClass("rich-text-overlay");
 
+		// @ts-ignore
+		if (this.view.app.isMobile) {
+			this.container.addClass("is-mobile");
+		}
+
 		// Insert it BEFORE the standard editor so it sits at the top level
 		this.view.contentEl.appendChild(this.container);
 
