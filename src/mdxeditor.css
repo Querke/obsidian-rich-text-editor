@@ -4,16 +4,41 @@
 	max-width: min(100%, var(--file-line-width));
 }
 
-/* Tight paragraphs (Obsidian-like) */
 .mxeditor-content-editable p {
 	margin: 0rem !important;
 	line-height: 1.5rem !important;
 }
 
-/* Optional: reduce block spacing generally */
 .mxeditor-content-editable :where(ul, ol, li, blockquote) {
-	margin-block: 0rem !important;
-	line-height: 1.5rem !important;
+	margin-block: 0.1rem !important;
+	line-height: 24px !important;
+	/* padding-top: var(--list-spacing) !important;
+	padding-bottom: var(--list-spacing) !important; */
+}
+
+.mxeditor-content-editable :where(ul) {
+	padding-top: 0 !important;
+	padding-bottom: 0 !important;
+	margin: 0 !important;
+	/* margin-block: 0.1rem !important;
+	line-height: 1.5rem !important; */
+	/* padding-top: var(--list-spacing) !important;
+	padding-bottom: var(--list-spacing) !important; */
+}
+
+.mdxeditor-root-contenteditable li[role="checkbox"] {
+	margin-inline-start: -24px !important;
+}
+
+/* Center the task checkbox box vertically */
+.mdxeditor-root-contenteditable li[class*="_listItemUnchecked_"]::before,
+.mdxeditor-root-contenteditable li[class*="_listItemChecked_"]::before {
+	transform: translateY(5px);
+}
+
+/* Center the checkmark (the ::after on checked items) vertically too */
+.mdxeditor-root-contenteditable li[class*="_listItemChecked_"]::after {
+	transform: translateY(5px) rotate(45deg);
 }
 
 .mxeditor-content-editable h1,
