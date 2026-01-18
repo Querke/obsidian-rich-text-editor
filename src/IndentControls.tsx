@@ -1,4 +1,9 @@
-import { ButtonWithTooltip, MDXEditorMethods } from "@mdxeditor/editor";
+import {
+	ButtonWithTooltip,
+	MDXEditorMethods,
+	SingleChoiceToggleGroup,
+} from "@mdxeditor/editor";
+import { getIcon } from "obsidian";
 
 interface Props {
 	editorRef: MDXEditorMethods | null;
@@ -50,42 +55,45 @@ export const IndentControls = (props: Props) => {
 	};
 
 	return (
-		<>
-			<ButtonWithTooltip
-				title="Decrease indent"
-				onClick={() => triggerIndent(true)}
-			>
-				<svg
-					width="24"
-					height="24"
-					viewBox="0 0 24 24"
-					fill="none"
-					xmlns="http://www.w3.org/2000/svg"
-				>
-					<path
-						d="M4 19V17H12V19H4ZM4 13V11H12V13H4ZM4 7V5H12V7H4ZM16.5 15.5L13 12L16.5 8.5L17.55 9.55L15.1 12L17.55 14.45L16.5 15.5Z"
-						fill="currentColor"
-					/>
-				</svg>
-			</ButtonWithTooltip>
+		<SingleChoiceToggleGroup
+			value="" // Always empty so buttons don't stay "selected"
+			onChange={(value) => {
+				if (value === "outdent") triggerIndent(true);
+				if (value === "indent") triggerIndent(false);
+			}}
+			items={[
+				{
+					title: "Decrease indent",
+					value: "outdent",
+					// Obsidian/Lucide icon for outdent
+					contents: <ObsidianIcon iconId="outdent" />,
+				},
+				{
+					title: "Increase indent",
+					value: "indent",
+					// Obsidian/Lucide icon for indent
+					contents: <ObsidianIcon iconId="indent" />,
+				},
+			]}
+		/>
+	);
+};
 
-			<ButtonWithTooltip
-				title="Increase indent"
-				onClick={() => triggerIndent(false)}
-			>
-				<svg
-					width="24"
-					height="24"
-					viewBox="0 0 24 24"
-					fill="none"
-					xmlns="http://www.w3.org/2000/svg"
-				>
-					<path
-						d="M4 19V17H12V19H4ZM4 13V11H12V13H4ZM4 7V5H12V7H4ZM20 12L16.5 15.5L15.45 14.45L17.9 12L15.45 9.55L16.5 8.5L20 12Z"
-						fill="currentColor"
-					/>
-				</svg>
-			</ButtonWithTooltip>
-		</>
+const ObsidianIcon = ({ iconId }: { iconId: string }) => {
+	const iconEl = getIcon(iconId);
+	if (!iconEl) return null;
+
+	// Convert the SVG element to an HTML string for React
+	return (
+		<span
+			style={{
+				display: "flex",
+				alignItems: "center",
+				justifyContent: "center",
+				width: "24px",
+				height: "24px",
+			}}
+			dangerouslySetInnerHTML={{ __html: iconEl.outerHTML }}
+		/>
 	);
 };
