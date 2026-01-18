@@ -12,22 +12,54 @@
 .mxeditor-content-editable :where(ul, ol, li, blockquote) {
 	margin-block: 0.1rem !important;
 	line-height: 24px !important;
-	/* padding-top: var(--list-spacing) !important;
-	padding-bottom: var(--list-spacing) !important; */
 }
 
 .mxeditor-content-editable :where(ul) {
 	padding-top: 0 !important;
 	padding-bottom: 0 !important;
 	margin: 0 !important;
-	/* margin-block: 0.1rem !important;
-	line-height: 1.5rem !important; */
-	/* padding-top: var(--list-spacing) !important;
-	padding-bottom: var(--list-spacing) !important; */
 }
 
 .mdxeditor-root-contenteditable li[role="checkbox"] {
 	margin-inline-start: -24px !important;
+}
+
+/* 1. Layout: Ensure flexbox so text takes full width */
+.mdxeditor-root-contenteditable li[role="checkbox"] {
+	display: flex !important;
+	align-items: flex-start !important;
+	position: relative !important;
+
+	/* DISABLE clicks on the container itself to prevent "Row Focus" behavior */
+	pointer-events: none !important;
+}
+
+/* 2. Checkbox: Re-enable clicks solely for the checkbox icon */
+.mdxeditor-root-contenteditable li[role="checkbox"]::before {
+	pointer-events: auto !important;
+	cursor: pointer !important;
+	flex-shrink: 0 !important;
+}
+
+/* 3. Text: Re-enable clicks for the text and make it fill the space */
+.mdxeditor-root-contenteditable li[role="checkbox"] > span {
+	pointer-events: auto !important;
+	cursor: text !important;
+
+	flex: 1 !important; /* Grow to fill the line */
+	min-width: 0 !important;
+	display: block !important; /* Ensure it behaves like a block for clicks */
+
+	/* Fix z-index to ensure it sits above the list item background */
+	position: relative !important;
+	z-index: 1 !important;
+}
+
+/* 4. Visuals: Remove the focus ring entirely */
+li[role="checkbox"]:focus,
+li[role="checkbox"]:focus-within {
+	outline: none !important;
+	box-shadow: none !important;
 }
 
 /* Center the task checkbox box vertically */

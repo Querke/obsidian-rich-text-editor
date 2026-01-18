@@ -127,6 +127,101 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 			setTimeout(enableMobileFeatures, 100);
 		}, []);
 
+		useEffect(() => {
+			if (!hostRef.current) {
+				return;
+			}
+
+			const editable = hostRef.current.querySelector(
+				".mxeditor-content-editable"
+			) as HTMLElement | null;
+			if (!editable) {
+				return;
+			}
+
+			const checkboxHitWidthPx = 30;
+
+			const onPointerDownCapture = (evt: PointerEvent) => {
+				const target = evt.target as HTMLElement | null;
+				if (!target) {
+					return;
+				}
+
+				const li = target.closest(
+					'li[role="checkbox"]'
+				) as HTMLElement | null;
+				if (!li) {
+					return;
+				}
+
+				const rect = li.getBoundingClientRect();
+				const dir = window.getComputedStyle(li).direction;
+
+				let xFromStart = 0;
+
+				if (dir === "rtl") {
+					xFromStart = rect.right - evt.clientX;
+				} else {
+					xFromStart = evt.clientX - rect.left;
+				}
+
+				// Only allow Lexical to toggle when clicking in the checkbox gutter
+				if (xFromStart > checkboxHitWidthPx) {
+					evt.stopImmediatePropagation();
+				}
+			};
+
+			const onKeyDownCapture = (evt: KeyboardEvent) => {
+				if (evt.key !== " ") {
+					return;
+				}
+
+				const selection = window.getSelection();
+				if (!selection) {
+					return;
+				}
+
+				const anchorNode = selection.anchorNode;
+				if (!anchorNode) {
+					return;
+				}
+
+				const anchorElement =
+					anchorNode.nodeType === Node.ELEMENT_NODE
+						? (anchorNode as Element)
+						: anchorNode.parentElement;
+
+				if (!anchorElement) {
+					return;
+				}
+
+				const li = anchorElement.closest('li[role="checkbox"]');
+				if (!li) {
+					return;
+				}
+
+				// Prevent Lexical's checklist "Space toggles checkbox" behavior
+				// while still allowing the browser to insert a space.
+				evt.stopImmediatePropagation();
+			};
+
+			editable.addEventListener(
+				"pointerdown",
+				onPointerDownCapture,
+				true
+			);
+			editable.addEventListener("keydown", onKeyDownCapture, true);
+
+			return () => {
+				editable.removeEventListener(
+					"pointerdown",
+					onPointerDownCapture,
+					true
+				);
+				editable.removeEventListener("keydown", onKeyDownCapture, true);
+			};
+		}, []);
+
 		const handleContentChange = (newMarkdown: string) => {
 			props.onSave(newMarkdown);
 		};
