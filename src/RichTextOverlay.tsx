@@ -74,39 +74,83 @@ export class RichTextOverlay {
 		this.render();
 	}
 
+	// Convert MDXEditor's "Spaces" structure back to Obsidian's "Tabs" (optional)
 	mdxToObsidian = (text: string) => {
-		return (
-			text
-				.replace(/&#x20;/g, " ")
-				.replace(/\r\n/g, "\n")
-				// halve newline runs: 2 -> 1, 4 -> 2, 6 -> 3, etc.
-				.replace(/\n{2,}/g, (m) =>
-					"\n".repeat(Math.floor(m.length / 2))
-				)
+		// 1. Convert entities back to characters
+		let output = text
+			.replace(/&#x20;/g, " ")
+			.replace(/&#x9;/g, "\t")
+			.replace(/\r\n/g, "\n");
+
+		// 2. Reduce excessive newlines (Halve them: \n\n -> \n)
+		output = output.replace(/\n{2,}/g, (m) =>
+			"\n".repeat(Math.floor(m.length / 2)),
 		);
+
+		// OPTIONAL: If you strictly want TABS for list indentation in Obsidian
+		// This converts 2-space indentation at start of lines into Tabs
+		// Remove this block if you are happy with Spaces in Obsidian
+		output = output.replace(/^(\s+)/gm, (match) => {
+			// Replace every 2 spaces with 1 tab
+			return match.replace(/  /g, "\t");
+		});
+
+		return output;
 	};
 
 	obsidianToMdx = (obsidian: string) => {
-		const normalized = obsidian.replace(/\r\n/g, "\n");
-		const lines = normalized.split("\n");
+		// 1. Normalize line endings
+		let normalized = obsidian.replace(/\r\n/g, "\n");
 
+		// 2. MDXEditor NEEDS spaces for lists, but handles content tabs as entities
+		// We must split this carefully.
+
+		// A. Handle content tabs: convert tabs inside text to entities &#x9;
+		// BUT keep leading tabs as they are for now (we handle structure next)
+		normalized = normalized.replace(/([^\n\t])\t/g, "$1&#x9;");
+
+		const lines = normalized.split("\n");
 		const paragraphs: string[] = [];
 
-		for (let i = 0; i < lines.length; i++) {
-			const line = lines[i];
+		// Helper to check if a line is a list item
+		const isList = (line: string) => /^\s*(-|\*|\d+\.)\s/.test(line);
 
-			// Empty line => intentional blank line paragraph marker
+		for (let i = 0; i < lines.length; i++) {
+			let line = lines[i];
+
+			// B. Convert Structural Indentation (Leading Tabs -> Spaces)
+			// MDXEditor parser fails if lists use real tabs. It wants 2 spaces per level.
+			const leadingWhitespace = line.match(/^\s*/)?.[0] || "";
+			if (leadingWhitespace.includes("\t")) {
+				const newPrefix = leadingWhitespace.replace(/\t/g, "  "); // 1 Tab = 2 Spaces
+				line = newPrefix + line.substring(leadingWhitespace.length);
+			}
+
+			// Empty line handling
 			if (line.length === 0) {
 				paragraphs.push("&#x20;");
 				continue;
 			}
 
-			// Preserve trailing spaces by encoding them
-			const withTrailingSpaces = line.replace(/[ ]+$/g, (m) => {
-				return "&#x20;".repeat(m.length);
-			});
+			// Preserve trailing spaces
+			const withTrailingSpaces = line.replace(/[ ]+$/g, (m) =>
+				"&#x20;".repeat(m.length),
+			);
 
-			paragraphs.push(withTrailingSpaces);
+			// C. Smart Joining
+			// If this line AND the previous line were list items, attach them tightly
+			// Otherwise, treat as a new paragraph block
+			const prevLine = i > 0 ? lines[i - 1] : "";
+			const isTightList =
+				isList(line) && isList(prevLine) && prevLine.trim().length > 0;
+
+			if (isTightList) {
+				// Attach to the last paragraph with a single newline (tight list)
+				paragraphs[paragraphs.length - 1] += "\n" + withTrailingSpaces;
+			} else {
+				// New block
+				paragraphs.push(withTrailingSpaces);
+			}
 		}
 
 		return paragraphs.join("\n\n");
@@ -119,7 +163,17 @@ export class RichTextOverlay {
 			// const cleanText = newText.replace(/[ ]+(?=\n|$)/g, (m) => {
 			// 	return "&#x20;".repeat(m.length);
 			// });
+			console.log(
+				"obsidian text before convert",
+				JSON.stringify(newText),
+			);
+
 			const cleanText = this.obsidianToMdx(newText);
+			console.log(
+				"obsidian text after convert",
+				JSON.stringify(cleanText),
+			);
+
 			this.editorRef.setMarkdown(cleanText);
 			this.editorRef.setTitle(this.view.file?.basename || "Untitled");
 		} else {
@@ -159,7 +213,16 @@ export class RichTextOverlay {
 					title={file?.basename || "Untitled"}
 					text={initialText}
 					onSave={(newText) => {
+						console.log(
+							"mdx before convert",
+							JSON.stringify(newText),
+						);
 						const cleanText = this.mdxToObsidian(newText);
+						console.log(
+							"mdx text after convert: ",
+							JSON.stringify(cleanText),
+						);
+
 						this.view.editor.setValue(cleanText);
 						this.view.requestSave();
 					}}
@@ -168,7 +231,7 @@ export class RichTextOverlay {
 					onImageUpload={(file) => this.handleImageUpload(file)}
 					onResolveImage={this.resolveImagePath}
 				/>
-			</StrictMode>
+			</StrictMode>,
 		);
 	}
 
@@ -212,7 +275,7 @@ export class RichTextOverlay {
 		const filePath =
 			await this.view.app.fileManager.getAvailablePathForAttachment(
 				baseFilename,
-				this.view.file?.path || ""
+				this.view.file?.path || "",
 			);
 
 		const folderPath = filePath.substring(0, filePath.lastIndexOf("/"));
@@ -226,12 +289,12 @@ export class RichTextOverlay {
 		const buffer = await file.arrayBuffer();
 		const createdFile = await this.view.app.vault.createBinary(
 			filePath,
-			buffer
+			buffer,
 		);
 
 		const linkText = this.view.app.fileManager.generateMarkdownLink(
 			createdFile,
-			this.view.file?.path || ""
+			this.view.file?.path || "",
 		);
 
 		// This handles both Wiki-links ![[Path]] and Standard links ![](Path)
@@ -250,7 +313,7 @@ export class RichTextOverlay {
 		const decodedPath = decodeURI(src);
 		const file = this.view.app.metadataCache.getFirstLinkpathDest(
 			decodedPath,
-			this.view.file?.path || ""
+			this.view.file?.path || "",
 		);
 
 		if (file) return this.view.app.vault.adapter.getResourcePath(file.path);
