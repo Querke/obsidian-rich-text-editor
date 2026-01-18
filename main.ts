@@ -72,6 +72,15 @@ export default class RichTextPlugin extends Plugin {
 			})
 		);
 
+		// Trigger visibility check whenever the layout changes (e.g., switching to Reading Mode)
+		this.registerEvent(
+			this.app.workspace.on("layout-change", () => {
+				this.app.workspace.iterateAllLeaves((leaf) => {
+					this.updateVisibility(leaf);
+				});
+			})
+		);
+
 		this.registerEvent(
 			this.app.workspace.on("css-change", () => {
 				// Update every active overlay
@@ -162,12 +171,15 @@ export default class RichTextPlugin extends Plugin {
 			return;
 		}
 
-		const container = (leaf.view as ItemView).contentEl;
+		const view = leaf.view as ItemView;
+		const container = view.contentEl;
 		const overlay = this.overlays.get(leaf);
 
-		if (this.settings.isDefaultEditor) {
-			container.addClass("is-rich-text-mode");
+		const isReadingMode = view.getState().mode === "preview";
 
+		// Only show rich text if setting is ON AND we are NOT in reading mode
+		if (this.settings.isDefaultEditor && !isReadingMode) {
+			container.addClass("is-rich-text-mode");
 			overlay?.update();
 			overlay?.toggleScope(true);
 		} else {
@@ -182,11 +194,19 @@ export default class RichTextPlugin extends Plugin {
 		const action = (leaf.view as any).__richTextSwitchAction as
 			| HTMLElement
 			| undefined;
-
 		if (!action) return;
 
-		const icon = this.settings.isDefaultEditor ? "candy-off" : "candy";
-		setIcon(action, icon);
+		// NEW: Detect reading mode
+		const isReadingMode =
+			(leaf.view as ItemView).getState().mode === "preview";
+
+		// Hide the button if in reading mode, otherwise show it
+		action.style.display = isReadingMode ? "none" : "";
+
+		if (!isReadingMode) {
+			const icon = this.settings.isDefaultEditor ? "candy-off" : "candy";
+			setIcon(action, icon);
+		}
 	}
 
 	async loadSettings() {
