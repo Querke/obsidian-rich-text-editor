@@ -3,6 +3,8 @@ import { oneDark } from "@codemirror/theme-one-dark";
 import {
 	BlockTypeSelect,
 	BoldItalicUnderlineToggles,
+	Button,
+	ButtonWithTooltip,
 	codeBlockPlugin,
 	codeMirrorPlugin,
 	CodeToggle,
@@ -37,6 +39,7 @@ import {
 	useState,
 } from "react";
 import { createPortal } from "react-dom";
+import { IndentControls } from "./IndentControls";
 
 interface Props {
 	title: string;
@@ -83,19 +86,19 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 			// Wait for MDXEditor to render
 			setTimeout(() => {
 				const root = hostRef.current?.querySelector(
-					".mdxeditor"
+					".mdxeditor",
 				) as HTMLElement;
 
 				// Get the container
 				const contentEditor = root?.querySelector(
-					".mdxeditor-root-contenteditable"
+					".mdxeditor-root-contenteditable",
 				);
 				// Get the specific first child element
 				const targetChild = contentEditor?.firstElementChild;
 
 				if (targetChild) {
 					let bar = root.querySelector(
-						".custom-titlebar"
+						".custom-titlebar",
 					) as HTMLElement;
 					if (!bar) {
 						bar = document.createElement("div");
@@ -115,7 +118,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 
 			const enableMobileFeatures = () => {
 				const editable = hostRef.current?.querySelector(
-					".mxeditor-content-editable"
+					".mxeditor-content-editable",
 				);
 				if (editable) {
 					// Force iOS to Capitalize the first letter of sentences
@@ -133,7 +136,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 			}
 
 			const editable = hostRef.current.querySelector(
-				".mxeditor-content-editable"
+				".mxeditor-content-editable",
 			) as HTMLElement | null;
 			if (!editable) {
 				return;
@@ -148,7 +151,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 				}
 
 				const li = target.closest(
-					'li[role="checkbox"]'
+					'li[role="checkbox"]',
 				) as HTMLElement | null;
 				if (!li) {
 					return;
@@ -208,7 +211,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 			editable.addEventListener(
 				"pointerdown",
 				onPointerDownCapture,
-				true
+				true,
 			);
 			editable.addEventListener("keydown", onKeyDownCapture, true);
 
@@ -216,7 +219,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 				editable.removeEventListener(
 					"pointerdown",
 					onPointerDownCapture,
-					true
+					true,
 				);
 				editable.removeEventListener("keydown", onKeyDownCapture, true);
 			};
@@ -292,7 +295,11 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 									<UndoRedo />
 									<BoldItalicUnderlineToggles />
 									<ListsToggle />
+									<IndentControls
+										editorRef={editorRef.current}
+									/>
 									<BlockTypeSelect />
+
 									<StrikeThroughSupSubToggles />
 									<HighlightToggle />
 									<CodeToggle />
@@ -319,7 +326,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 							},
 							// 2. Handle Viewing (resolve vault paths to viewable URLs)
 							imagePreviewHandler: async (
-								imageSource: string
+								imageSource: string,
 							) => {
 								if (imageSource.startsWith("http")) {
 									return imageSource;
@@ -364,5 +371,5 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 					createPortal(<TitleBar />, titleBarContainer)}
 			</div>
 		);
-	}
+	},
 );
