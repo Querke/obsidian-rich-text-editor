@@ -1,6 +1,7 @@
 .rich-text-overlay.is-mobile .custom-titlebar {
 	/* Use padding so we don't push the container off-screen */
 	padding-top: 132px !important;
+	padding-bottom: 13px !important;
 
 	/* If you strictly need margin, you must calculate height: */
 	/* margin-top: 128px !important; */
@@ -56,7 +57,7 @@
 }
 
 .rich-text-overlay.is-mobile .mdxeditor {
-	padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+	padding-bottom: 52px !important;
 }
 
 .rich-text-overlay.is-mobile .mdxeditor-toolbar {
