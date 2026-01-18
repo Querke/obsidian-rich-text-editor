@@ -103,52 +103,52 @@ export class RichTextOverlay {
 		let normalized = obsidian.replace(/\r\n/g, "\n");
 
 		// 2. MDXEditor NEEDS spaces for lists, but handles content tabs as entities
-		// We must split this carefully.
-
-		// A. Handle content tabs: convert tabs inside text to entities &#x9;
-		// BUT keep leading tabs as they are for now (we handle structure next)
 		normalized = normalized.replace(/([^\n\t])\t/g, "$1&#x9;");
 
 		const lines = normalized.split("\n");
 		const paragraphs: string[] = [];
 
-		// Helper to check if a line is a list item
 		const isList = (line: string) => /^\s*(-|\*|\d+\.)\s/.test(line);
+		// NEW: Check if line is a table row
+		const isTable = (line: string) => line.trim().startsWith("|");
 
 		for (let i = 0; i < lines.length; i++) {
 			let line = lines[i];
 
-			// B. Convert Structural Indentation (Leading Tabs -> Spaces)
-			// MDXEditor parser fails if lists use real tabs. It wants 2 spaces per level.
+			// B. Convert Structural Indentation
 			const leadingWhitespace = line.match(/^\s*/)?.[0] || "";
 			if (leadingWhitespace.includes("\t")) {
-				const newPrefix = leadingWhitespace.replace(/\t/g, "  "); // 1 Tab = 2 Spaces
+				const newPrefix = leadingWhitespace.replace(/\t/g, "  ");
 				line = newPrefix + line.substring(leadingWhitespace.length);
 			}
 
-			// Empty line handling
+			// Restore your original empty line handling
+			// This ensures vertical spacing is preserved exactly as you had it
 			if (line.length === 0) {
 				paragraphs.push("&#x20;");
 				continue;
 			}
 
-			// Preserve trailing spaces
 			const withTrailingSpaces = line.replace(/[ ]+$/g, (m) =>
 				"&#x20;".repeat(m.length),
 			);
 
 			// C. Smart Joining
-			// If this line AND the previous line were list items, attach them tightly
-			// Otherwise, treat as a new paragraph block
 			const prevLine = i > 0 ? lines[i - 1] : "";
+
+			// Logic: Join with single \n if it's a continuing List OR a continuing Table
 			const isTightList =
 				isList(line) && isList(prevLine) && prevLine.trim().length > 0;
+			const isTightTable =
+				isTable(line) &&
+				isTable(prevLine) &&
+				prevLine.trim().length > 0;
 
-			if (isTightList) {
-				// Attach to the last paragraph with a single newline (tight list)
+			if (isTightList || isTightTable) {
+				// Attach to previous block with single newline (preserves structure)
 				paragraphs[paragraphs.length - 1] += "\n" + withTrailingSpaces;
 			} else {
-				// New block
+				// Otherwise start a new paragraph block (separated by \n\n later)
 				paragraphs.push(withTrailingSpaces);
 			}
 		}
