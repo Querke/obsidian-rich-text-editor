@@ -3,7 +3,7 @@
 	"name": "Rich Text Editor",
 	"version": "1.0.0",
 	"minAppVersion": "1.5.0",
-	"description": "A rich text markdown editor for Obsidian based on MDXEditor.",
+	"description": "A rich text markdown editor based on MDXEditor.",
 	"author": "Simon Tysland",
 	"authorUrl": "https://github.com/Querke/obsidian-rich-text-editor",
 	"isDesktopOnly": false
