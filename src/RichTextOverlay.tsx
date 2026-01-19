@@ -198,19 +198,16 @@ export class RichTextOverlay {
 		if (this.editorRef) {
 			const newText = this.view.editor.getValue();
 
-			// const cleanText = newText.replace(/[ ]+(?=\n|$)/g, (m) => {
-			// 	return "&#x20;".repeat(m.length);
-			// });
-			console.log(
-				"obsidian text before convert",
-				JSON.stringify(newText),
-			);
+			// console.log(
+			// 	"obsidian text before convert",
+			// 	JSON.stringify(newText),
+			// );
 
 			const cleanText = this.obsidianToMdx(newText);
-			console.log(
-				"obsidian text after convert",
-				JSON.stringify(cleanText),
-			);
+			// console.log(
+			// 	"obsidian text after convert",
+			// 	JSON.stringify(cleanText),
+			// );
 
 			this.editorRef.setMarkdown(cleanText);
 			this.editorRef.setTitle(this.view.file?.basename || "Untitled");
@@ -251,15 +248,15 @@ export class RichTextOverlay {
 					title={file?.basename || "Untitled"}
 					text={initialText}
 					onSave={(newText) => {
-						console.log(
-							"mdx before convert",
-							JSON.stringify(newText),
-						);
+						// console.log(
+						// 	"mdx before convert",
+						// 	JSON.stringify(newText),
+						// );
 						const cleanText = this.mdxToObsidian(newText);
-						console.log(
-							"mdx text after convert: ",
-							JSON.stringify(cleanText),
-						);
+						// console.log(
+						// 	"mdx text after convert: ",
+						// 	JSON.stringify(cleanText),
+						// );
 
 						this.view.editor.setValue(cleanText);
 						this.view.requestSave();
