@@ -269,7 +269,33 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 						if (e.key === "Enter") {
 							e.preventDefault();
 							handleSave();
-							editorRef.current?.focus();
+							setTimeout(() => {
+								// 1. Get the actual content editable root
+								const root = hostRef.current?.querySelector(
+									".mxeditor-content-editable",
+								);
+
+								if (root) {
+									// 2. Create a new Range
+									const range = document.createRange();
+
+									// 3. Select the entire content of the editor
+									range.selectNodeContents(root);
+
+									// 4. Collapse the range to the start (true = start, false = end)
+									range.collapse(true);
+
+									// 5. Apply the selection
+									const selection = window.getSelection();
+									if (selection) {
+										selection.removeAllRanges();
+										selection.addRange(range);
+									}
+
+									// 6. Ensure the editor is technically focused
+									editorRef.current?.focus();
+								}
+							}, 100);
 						}
 					}}
 				/>
