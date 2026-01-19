@@ -14,7 +14,7 @@ Luckily changing between the editor is just one click away!
 * **Code-Free Editing:** No more looking at code when writing text. Edit them visually, just like a modern word processor.
 * **Obsidian Integration:** Integrated seamlessly with Obsidian's native UI and workflows.
 * **Obsidian look and feel:** I tried to replicate the look of obsidian as much as I can, so the workflow is as familiar as possible.
-* **Mobile support:** With toolbar just over your keyboard, just what you are used to. Tested on iOS, but should be working on android
+* **Mobile support:** With toolbar just over your keyboard, just what you are used to.
 ## How to Use
 <img width="332" height="133" alt="image" src="https://github.com/user-attachments/assets/2cad521b-742c-4cda-8ce7-6104de5316f9" />
 
@@ -32,3 +32,5 @@ But it means that it might be lacking some things that you want.
 I would very much appreciate forks and contributions if you would like to see new features in the plugin. 
 ## License
 MIT License. Feel free to use and contribute!
+## Thanks to
+MDXEditor https://mdxeditor.dev/
