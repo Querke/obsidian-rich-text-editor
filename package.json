@@ -1,5 +1,5 @@
 {
-	"name": "obsidian-rich-text-editor",
+	"name": "rich-text-editor",
 	"version": "1.0.0",
 	"description": "A rich text markdown editor for Obsidian based on MDXEditor.",
 	"main": "main.js",
