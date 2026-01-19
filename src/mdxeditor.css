@@ -726,8 +726,8 @@ mark {
 	cursor: default;
 	color: var(--baseText);
 
-	min-height: 12px;
-	min-width: 12px;
+	min-height: 18px;
+	min-width: 18px;
 	width: 100%;
 	height: 100%;
 	border-radius: var(--radius-small);
@@ -743,8 +743,8 @@ mark {
 }
 
 ._iconButton_1e2ox_457 svg {
-	width: 10px;
-	height: 10px;
+	width: 18px;
+	height: 18px;
 }
 
 @media (hover: hover) {
@@ -932,8 +932,8 @@ mark {
 	box-sizing: border-box;
 	cursor: default;
 	position: absolute;
-	top: 10px;
-	right: 10px;
+	top: 18px;
+	right: 18px;
 }
 
 ._popoverContent_1e2ox_638 {
@@ -1044,7 +1044,7 @@ mark {
 
 ._tableEditor_1e2ox_714 {
 	table-layout: fixed;
-	width: 98%;
+	width: 100%;
 	height: 100%;
 	border-spacing: 0;
 	border-collapse: collapse;
@@ -1107,22 +1107,10 @@ mark {
 	opacity: 0;
 }
 
-@media (hover: hover) {
-	._tableEditor_1e2ox_714:hover ._tableColumnEditorTrigger_1e2ox_744,
-	._tableEditor_1e2ox_714:hover ._tableRowEditorTrigger_1e2ox_745,
-	._tableEditor_1e2ox_714:hover ._addRowButton_1e2ox_746,
-	._tableEditor_1e2ox_714:hover ._addColumnButton_1e2ox_747,
-	._tableEditor_1e2ox_714:hover ._iconButton_1e2ox_457 {
-		opacity: 0;
-	}
-
-	._tableEditor_1e2ox_714:hover ._tableColumnEditorTrigger_1e2ox_744:hover,
-	._tableEditor_1e2ox_714:hover ._tableRowEditorTrigger_1e2ox_745:hover,
-	._tableEditor_1e2ox_714:hover ._addRowButton_1e2ox_746,
-	._tableEditor_1e2ox_714:hover ._addColumnButton_1e2ox_747,
-	._tableEditor_1e2ox_714:hover ._iconButton_1e2ox_457 {
-		opacity: 1;
-	}
+._tableEditor_1e2ox_714:focus-within ._addRowButton_1e2ox_746,
+._tableEditor_1e2ox_714:focus-within ._addColumnButton_1e2ox_747,
+._tableEditor_1e2ox_714:focus-within ._iconButton_1e2ox_457 {
+	opacity: 1;
 }
 
 /* Force the button in the first row header cell to opacity 1 when table is hovered */
@@ -1161,8 +1149,8 @@ mark {
 	position: absolute;
 	right: 0;
 	bottom: 0;
-	min-height: 12px;
-	min-width: 12px;
+	min-height: 18px;
+	min-width: 18px;
 	width: 100%;
 	height: 100%;
 
@@ -1177,8 +1165,8 @@ mark {
 
 ._tableColumnEditorTrigger_1e2ox_744 svg {
 	display: block;
-	height: 10px;
-	width: 10px;
+	height: 18px;
+	width: 18px;
 }
 
 @media (hover: hover) {
@@ -1334,8 +1322,8 @@ mark {
 ._addColumnButton_1e2ox_747 svg,
 ._addRowButton_1e2ox_746 svg {
 	display: block;
-	height: 10px;
-	width: 10px;
+	height: 18px;
+	width: 18px;
 }
 
 @media (hover: hover) {
