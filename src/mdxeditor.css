@@ -601,6 +601,7 @@ mark {
 
 ._codeMirrorToolbar_1e2ox_409 {
 	position: absolute;
+	transform: translateY(-100%);
 	right: 0;
 	top: 0;
 	display: flex;
@@ -611,8 +612,16 @@ mark {
 	opacity: 0;
 }
 
-._codeMirrorWrapper_1e2ox_392:hover ._codeMirrorToolbar_1e2ox_409 {
+._codeMirrorWrapper_1e2ox_392:focus-within ._codeMirrorToolbar_1e2ox_409 {
 	opacity: 1;
+}
+
+[class*="_codeMirrorToolbar_"] button {
+	/* "Remove" the default padding */
+	padding: var(--spacing-0_5) var(--spacing-1) !important;
+
+	/* "Remove" the fixed height constraint */
+	height: auto !important;
 }
 
 ._frontmatterWrapper_1e2ox_413 {
