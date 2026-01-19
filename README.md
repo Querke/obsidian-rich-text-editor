@@ -1,6 +1,6 @@
+# Obsidian Rich Text Editor
 <img width="2772" height="1475" alt="image" src="https://github.com/user-attachments/assets/1b10e436-29a6-4546-8a37-502483773fb6" />
 
-# Obsidian Rich Text Editor
 A seamless, rich-text writing experience for Obsidian. Built for users who want the power of Markdown without the visual clutter of raw syntax.
 The plugin is using a customized version of MDXEditor.
 ## Why this exists?
@@ -20,7 +20,7 @@ Luckily changing between the editor is just one click away!
 
 1. Open any Markdown file.
 2. Switch between obsidians markdown editor and rich text editor:
-	 1. Click the candy icon in the toolbar
+	 1. Click the **candy icon** in the toolbar
 	 2. Use the `Rich text editor: Toggle Mode` command
 ## Installation
 Install the plugin via Community Plugins in obsidian.
