@@ -718,6 +718,10 @@ mark {
 	font-size: var(--text-sm);
 }
 
+._iconButton_1e2ox_457 {
+	border-radius: var(--radius-medium);
+}
+
 /* Force the button in the first row header cell to opacity 1 when table is hovered */
 ._tableEditor_1e2ox_714:hover ._iconButton_1e2ox_457 {
 	opacity: 1 !important;
