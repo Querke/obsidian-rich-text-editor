@@ -962,7 +962,7 @@ mark {
 }
 
 ._linkDialogPreviewAnchor_1e2ox_654 {
-	margin-right: var(--spacing-1);
+	margin-right: auto;
 	display: flex;
 	align-items: center;
 	color: var(--accentText);

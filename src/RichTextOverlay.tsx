@@ -87,6 +87,28 @@ export class RichTextOverlay {
 			"\n".repeat(Math.floor(m.length / 2)),
 		);
 
+		// Match standard markdown links: [Label](Url)
+		output = output.replace(
+			/\[([^\]]+)\]\(([^)]+)\)/g,
+			(match, label, url) => {
+				// A. Ignore External Links (http/https)
+				if (url.startsWith("http://") || url.startsWith("https://")) {
+					return match;
+				}
+
+				// B. Decode the URL (My%20Note -> My Note)
+				const decodedUrl = decodeURI(url);
+
+				// C. Check for Alias
+				// If the label is different from the filename, use [[File|Label]]
+				if (label !== decodedUrl) {
+					return `[[${decodedUrl}|${label}]]`;
+				}
+				// Otherwise, just use [[File]]
+				return `[[${decodedUrl}]]`;
+			},
+		);
+
 		// OPTIONAL: If you strictly want TABS for list indentation in Obsidian
 		// This converts 2-space indentation at start of lines into Tabs
 		// Remove this block if you are happy with Spaces in Obsidian
@@ -101,6 +123,22 @@ export class RichTextOverlay {
 	obsidianToMdx = (obsidian: string) => {
 		// 1. Normalize line endings
 		let normalized = obsidian.replace(/\r\n/g, "\n");
+
+		// A. Handle Aliased Wikilinks: [[Link|Alias]] -> [Alias](Link)
+		normalized = normalized.replace(
+			/\[\[([^|\]]+)\|([^\]]+)\]\]/g,
+			(match, link, alias) => {
+				// Encode the link path so MDXEditor accepts spaces (e.g. "My Note" -> "My%20Note")
+				const encodedLink = encodeURI(link.trim());
+				return `[${alias}](${encodedLink})`;
+			},
+		);
+
+		// B. Handle Standard Wikilinks: [[Link]] -> [Link](Link)
+		normalized = normalized.replace(/\[\[([^|\]]+)\]\]/g, (match, link) => {
+			const encodedLink = encodeURI(link.trim());
+			return `[${link}](${encodedLink})`;
+		});
 
 		// 2. MDXEditor NEEDS spaces for lists, but handles content tabs as entities
 		normalized = normalized.replace(/([^\n\t])\t/g, "$1&#x9;");
@@ -230,6 +268,15 @@ export class RichTextOverlay {
 					onRename={handleRename}
 					onImageUpload={(file) => this.handleImageUpload(file)}
 					onResolveImage={this.resolveImagePath}
+					onNavigate={(path) => {
+						// Use Obsidian's API to open the link
+						// 'this.view.file.path' is needed to resolve relative links (like "../Note")
+						this.view.app.workspace.openLinkText(
+							path,
+							this.view.file?.path || "",
+							false, // true = open in new tab, false = same tab
+						);
+					}}
 				/>
 			</StrictMode>,
 		);
