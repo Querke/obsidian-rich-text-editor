@@ -1,94 +1,34 @@
-# Obsidian Sample Plugin
+<img width="2772" height="1475" alt="image" src="https://github.com/user-attachments/assets/1b10e436-29a6-4546-8a37-502483773fb6" />
 
-This is a sample plugin for Obsidian (https://obsidian.md).
+# Obsidian Rich Text Editor
+A seamless, rich-text writing experience for Obsidian. Built for users who want the power of Markdown without the visual clutter of raw syntax.
+The plugin is using a customized version of MDXEditor.
+## Why this exists?
+I made this because editing text quickly on a phone became very cumbersome. For example, trying to delete a checklist item, forces you to delete all the symbols for that item (`- [ ]`). With MDXEditor, that just takes a backspace. 
+And I thought, how hard can it be to implement that into obsidian. It's just html right?
+Well, it took a bit to make it work nice with obsidian and to mimic everything to make it feel and look like obsidian. But I feel it works quite well for what it is.
 
-This project uses TypeScript to provide type checking and documentation.
-The repo depends on the latest plugin API (obsidian.d.ts) in TypeScript Definition format, which contains TSDoc comments describing what it does.
+While I do like the control you get from the regular WYSIWYG editor of obsidian, it makes it quite a hassle when trying to edit text quickly. 
+Luckily changing between the editor is just one click away!
+## Key Features
+* **Code-Free Editing:** No more looking at code when writing text. Edit them visually, just like a modern word processor.
+* **Obsidian Integration:** Integrated seamlessly with Obsidian's native UI and workflows.
+* **Obsidian look and feel:** I tried to replicate the look of obsidian as much as I can, so the workflow is as familiar as possible.
+* **Mobile support:** With toolbar just over your keyboard, just what you are used to. Tested on iOS, but should be working on android
+## How to Use
+<img width="332" height="133" alt="image" src="https://github.com/user-attachments/assets/2cad521b-742c-4cda-8ce7-6104de5316f9" />
 
-This sample plugin demonstrates some of the basic functionality the plugin API can do.
-- Adds a ribbon icon, which shows a Notice when clicked.
-- Adds a command "Open Sample Modal" which opens a Modal.
-- Adds a plugin setting tab to the settings page.
-- Registers a global click event and output 'click' to the console.
-- Registers a global interval which logs 'setInterval' to the console.
-
-## First time developing plugins?
-
-Quick starting guide for new plugin devs:
-
-- Check if [someone already developed a plugin for what you want](https://obsidian.md/plugins)! There might be an existing plugin similar enough that you can partner up with.
-- Make a copy of this repo as a template with the "Use this template" button (login to GitHub if you don't see it).
-- Clone your repo to a local development folder. For convenience, you can place this folder in your `.obsidian/plugins/your-plugin-name` folder.
-- Install NodeJS, then run `npm i` in the command line under your repo folder.
-- Run `npm run dev` to compile your plugin from `main.ts` to `main.js`.
-- Make changes to `main.ts` (or create new `.ts` files). Those changes should be automatically compiled into `main.js`.
-- Reload Obsidian to load the new version of your plugin.
-- Enable plugin in settings window.
-- For updates to the Obsidian API run `npm update` in the command line under your repo folder.
-
-## Releasing new releases
-
-- Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
-- Update your `versions.json` file with `"new-plugin-version": "minimum-obsidian-version"` so older versions of Obsidian can download an older version of your plugin that's compatible.
-- Create new GitHub release using your new version number as the "Tag version". Use the exact version number, don't include a prefix `v`. See here for an example: https://github.com/obsidianmd/obsidian-sample-plugin/releases
-- Upload the files `manifest.json`, `main.js`, `styles.css` as binary attachments. Note: The manifest.json file must be in two places, first the root path of your repository and also in the release.
-- Publish the release.
-
-> You can simplify the version bump process by running `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually in `manifest.json`.
-> The command will bump version in `manifest.json` and `package.json`, and add the entry for the new version to `versions.json`
-
-## Adding your plugin to the community plugin list
-
-- Check the [plugin guidelines](https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines).
-- Publish an initial version.
-- Make sure you have a `README.md` file in the root of your repo.
-- Make a pull request at https://github.com/obsidianmd/obsidian-releases to add your plugin.
-
-## How to use
-
-- Clone this repo.
-- Make sure your NodeJS is at least v16 (`node --version`).
-- `npm i` or `yarn` to install dependencies.
-- `npm run dev` to start compilation in watch mode.
-
-## Manually installing the plugin
-
-- Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/your-plugin-id/`.
-
-## Improve code quality with eslint (optional)
-- [ESLint](https://eslint.org/) is a tool that analyzes your code to quickly find problems. You can run ESLint against your plugin to find common bugs and ways to improve your code. 
-- To use eslint with this project, make sure to install eslint from terminal:
-  - `npm install -g eslint`
-- To use eslint to analyze this project use this command:
-  - `eslint main.ts`
-  - eslint will then create a report with suggestions for code improvement by file and line number.
-- If your source code is in a folder, such as `src`, you can use eslint with this command to analyze all files in that folder:
-  - `eslint ./src/`
-
-## Funding URL
-
-You can include funding URLs where people who use your plugin can financially support it.
-
-The simple way is to set the `fundingUrl` field to your link in your `manifest.json` file:
-
-```json
-{
-    "fundingUrl": "https://buymeacoffee.com"
-}
-```
-
-If you have multiple URLs, you can also do:
-
-```json
-{
-    "fundingUrl": {
-        "Buy Me a Coffee": "https://buymeacoffee.com",
-        "GitHub Sponsor": "https://github.com/sponsors",
-        "Patreon": "https://www.patreon.com/"
-    }
-}
-```
-
-## API Documentation
-
-See https://github.com/obsidianmd/obsidian-api
+1. Open any Markdown file.
+2. Switch between obsidians markdown editor and rich text editor:
+	 1. Click the candy icon in the toolbar
+	 2. Use the `Rich text editor: Toggle Mode` command
+## Installation
+Install the plugin via Community Plugins in obsidian.
+or
+manually download from the releases page and extract into a plugins in your vault.
+## Going forward
+My plan was to just make it easier for me to use my phone with obsidian with my workflows. And I feel the plugin is in a state where it has what I need.
+But it means that it might be lacking some things that you want. 
+I would very much appreciate forks and contributions if you would like to see new features in the plugin. 
+## License
+MIT License. Feel free to use and contribute!
