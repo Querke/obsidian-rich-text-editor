@@ -34,3 +34,6 @@ I would very much appreciate forks and contributions if you would like to see ne
 MIT License. Feel free to use and contribute!
 ## Thanks to
 MDXEditor https://mdxeditor.dev/
+## Development notes
+If you decide to play with the project, there are a lot of useeffects and custom functions made to make the plugin behave nicely with obsidian.
+Also the styles.css (the .css file obsidian loads) is automatically generated from merging mdxeditor.css and view.css together.
