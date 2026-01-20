@@ -12,8 +12,8 @@ export const IndentControls = (props: Props) => {
 
 		// Timeout ensures the editor is focused before manipulation
 		setTimeout(() => {
-			// Wrap the async logic inside an IIFE or a named function
-			(async () => {
+			// Prefixing with 'void' marks the promise as intentionally ignored
+			void (async () => {
 				const selection = window.getSelection();
 				const activeElement = document.activeElement;
 				const originalOffset = selection?.focusOffset || 0;

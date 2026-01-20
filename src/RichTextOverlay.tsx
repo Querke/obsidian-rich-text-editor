@@ -265,13 +265,12 @@ export class RichTextOverlay {
 					onRename={handleRename}
 					onImageUpload={(file) => this.handleImageUpload(file)}
 					onResolveImage={this.resolveImagePath}
-					onNavigate={async (path) => {
-						// Use Obsidian's API to open the link
-						// 'this.view.file.path' is needed to resolve relative links (like "../Note")
-						await this.view.app.workspace.openLinkText(
+					onNavigate={(path) => {
+						// Use the void operator to handle the promise returned by openLinkText
+						void this.view.app.workspace.openLinkText(
 							path,
 							this.view.file?.path || "",
-							false, // true = open in new tab, false = same tab
+							false,
 						);
 					}}
 				/>

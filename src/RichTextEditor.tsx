@@ -292,37 +292,31 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 						});
 					}}
 					// Save when user hits Enter
-					onKeyDown={async (e) => {
+					onKeyDown={(e) => {
 						if (e.key === "Enter") {
 							e.preventDefault();
-							await handleSave();
-							setTimeout(() => {
-								// 1. Get the actual content editable root
-								const root = hostRef.current?.querySelector(
-									".mxeditor-content-editable",
-								);
 
-								if (root) {
-									// 2. Create a new Range
-									const range = document.createRange();
+							void (async () => {
+								await handleSave();
 
-									// 3. Select the entire content of the editor
-									range.selectNodeContents(root);
+								setTimeout(() => {
+									const root = hostRef.current?.querySelector(
+										".mxeditor-content-editable",
+									);
+									if (root) {
+										const range = document.createRange();
+										range.selectNodeContents(root);
+										range.collapse(true);
 
-									// 4. Collapse the range to the start (true = start, false = end)
-									range.collapse(true);
-
-									// 5. Apply the selection
-									const selection = window.getSelection();
-									if (selection) {
-										selection.removeAllRanges();
-										selection.addRange(range);
+										const selection = window.getSelection();
+										if (selection) {
+											selection.removeAllRanges();
+											selection.addRange(range);
+										}
+										editorRef.current?.focus();
 									}
-
-									// 6. Ensure the editor is technically focused
-									editorRef.current?.focus();
-								}
-							}, 100);
+								}, 100);
+							})();
 						}
 					}}
 				/>

@@ -33,9 +33,9 @@ export default class RichTextPlugin extends Plugin {
 		this.addCommand({
 			id: "toggle-rich-text",
 			name: "Toggle mode",
-			callback: () => {
+			callback: async () => {
 				const leaf = this.app.workspace.getLeaf(false);
-				if (leaf) this.toggleMode(leaf);
+				if (leaf) await this.toggleMode(leaf);
 			},
 		});
 
@@ -65,12 +65,12 @@ export default class RichTextPlugin extends Plugin {
 					menu.addItem((item) => {
 						item.setTitle("Rich text mode")
 							.setChecked(this.settings.isDefaultEditor) // <-- Makes it a toggle
-							.onClick(() => {
+							.onClick(async () => {
 								// Use the specific leaf if clicked from header, otherwise active leaf
 								const targetLeaf =
 									leaf || this.app.workspace.getLeaf(false);
 								if (targetLeaf) {
-									this.toggleMode(targetLeaf);
+									await this.toggleMode(targetLeaf);
 								}
 							});
 					});
@@ -124,8 +124,8 @@ export default class RichTextPlugin extends Plugin {
 			const switchAction = (leaf.view as ItemView).addAction(
 				"candy",
 				"Switch to Rich Text",
-				() => {
-					this.toggleMode(leaf);
+				async () => {
+					await this.toggleMode(leaf);
 				},
 			);
 
