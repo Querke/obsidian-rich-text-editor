@@ -113,8 +113,8 @@ export class RichTextOverlay {
 		// This converts 2-space indentation at start of lines into Tabs
 		// Remove this block if you are happy with Spaces in Obsidian
 		output = output.replace(/^(\s+)/gm, (match) => {
-			// Replace every 2 spaces with 1 tab
-			return match.replace(/  /g, "\t");
+			// Replace every 2 spaces with 1 tab using an explicit quantifier
+			return match.replace(/\x20{2}/g, "\t");
 		});
 
 		return output;
@@ -265,10 +265,10 @@ export class RichTextOverlay {
 					onRename={handleRename}
 					onImageUpload={(file) => this.handleImageUpload(file)}
 					onResolveImage={this.resolveImagePath}
-					onNavigate={(path) => {
+					onNavigate={async (path) => {
 						// Use Obsidian's API to open the link
 						// 'this.view.file.path' is needed to resolve relative links (like "../Note")
-						this.view.app.workspace.openLinkText(
+						await this.view.app.workspace.openLinkText(
 							path,
 							this.view.file?.path || "",
 							false, // true = open in new tab, false = same tab

@@ -5,10 +5,16 @@ import {
 	ItemView,
 	TFile,
 	setIcon,
+	View,
 } from "obsidian";
 import { RichTextOverlay } from "./src/RichTextOverlay";
 import "./src/view.css";
 import "./src/mdxeditor.css";
+
+interface RichTextView extends View {
+	__richTextSwitchAction: HTMLElement;
+	__hasRichTextSwitch?: boolean;
+}
 
 interface RichTextPluginSettings {
 	isDefaultEditor: boolean;
@@ -40,7 +46,7 @@ export default class RichTextPlugin extends Plugin {
 					this.injectOverlay(leaf);
 					this.addSwitchButton(leaf);
 				}
-			})
+			}),
 		);
 
 		// 3. Initial Check: Inject into currently open leaves
@@ -69,7 +75,7 @@ export default class RichTextPlugin extends Plugin {
 							});
 					});
 				}
-			})
+			}),
 		);
 
 		// Trigger visibility check whenever the layout changes (e.g., switching to Reading Mode)
@@ -78,7 +84,7 @@ export default class RichTextPlugin extends Plugin {
 				this.app.workspace.iterateAllLeaves((leaf) => {
 					this.updateVisibility(leaf);
 				});
-			})
+			}),
 		);
 
 		this.registerEvent(
@@ -89,7 +95,7 @@ export default class RichTextPlugin extends Plugin {
 						this.overlays.get(leaf)?.updateReadableLineLength();
 					}
 				});
-			})
+			}),
 		);
 	}
 
@@ -112,7 +118,7 @@ export default class RichTextPlugin extends Plugin {
 	addSwitchButton(leaf: WorkspaceLeaf) {
 		if (leaf.view.getViewType() === "markdown") {
 			// Check a custom flag to prevent duplicate buttons
-			if ((leaf.view as any).__hasRichTextSwitch) return;
+			if ((leaf.view as RichTextView).__hasRichTextSwitch) return;
 
 			// FIX: Cast to ItemView to access addAction
 			const switchAction = (leaf.view as ItemView).addAction(
@@ -120,14 +126,14 @@ export default class RichTextPlugin extends Plugin {
 				"Switch to Rich Text",
 				() => {
 					this.toggleMode(leaf);
-				}
+				},
 			);
 
-			(leaf.view as any).__richTextSwitchAction = switchAction;
+			(leaf.view as RichTextView).__richTextSwitchAction = switchAction;
 			this.updateSwitchButtonIcon(leaf);
 
 			// Mark this view as having the button
-			(leaf.view as any).__hasRichTextSwitch = true;
+			(leaf.view as RichTextView).__hasRichTextSwitch = true;
 		}
 	}
 
@@ -159,9 +165,9 @@ export default class RichTextPlugin extends Plugin {
 		this.updateVisibility(leaf);
 	}
 
-	toggleMode(leaf: WorkspaceLeaf) {
+	async toggleMode(leaf: WorkspaceLeaf) {
 		this.settings.isDefaultEditor = !this.settings.isDefaultEditor;
-		this.saveSettings();
+		await this.saveSettings();
 		this.updateVisibility(leaf);
 	}
 
@@ -191,7 +197,7 @@ export default class RichTextPlugin extends Plugin {
 	}
 
 	updateSwitchButtonIcon(leaf: WorkspaceLeaf) {
-		const action = (leaf.view as any).__richTextSwitchAction as
+		const action = (leaf.view as RichTextView).__richTextSwitchAction as
 			| HTMLElement
 			| undefined;
 		if (!action) return;
@@ -213,14 +219,14 @@ export default class RichTextPlugin extends Plugin {
 		this.settings = Object.assign(
 			{},
 			DEFAULT_SETTINGS,
-			await this.loadData()
+			await this.loadData(),
 		);
 	}
 	async saveSettings() {
 		await this.saveData(this.settings);
 		// Refresh all active leaves to reflect new setting
 		this.app.workspace.iterateAllLeaves((leaf) =>
-			this.updateVisibility(leaf)
+			this.updateVisibility(leaf),
 		);
 	}
 }

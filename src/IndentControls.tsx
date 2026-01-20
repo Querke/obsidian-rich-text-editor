@@ -1,8 +1,4 @@
-import {
-	ButtonWithTooltip,
-	MDXEditorMethods,
-	SingleChoiceToggleGroup,
-} from "@mdxeditor/editor";
+import { MDXEditorMethods, SingleChoiceToggleGroup } from "@mdxeditor/editor";
 import { getIcon } from "obsidian";
 
 interface Props {
@@ -15,42 +11,40 @@ export const IndentControls = (props: Props) => {
 		props.editorRef?.focus();
 
 		// Timeout ensures the editor is focused before manipulation
-		setTimeout(async () => {
-			const selection = window.getSelection();
-			const activeElement = document.activeElement;
-			const originalOffset = selection?.focusOffset || 0;
+		setTimeout(() => {
+			// Wrap the async logic inside an IIFE or a named function
+			(async () => {
+				const selection = window.getSelection();
+				const activeElement = document.activeElement;
+				const originalOffset = selection?.focusOffset || 0;
 
-			// 1. Move cursor to start of the line
-			if (selection && selection.rangeCount > 0) {
-				try {
-					// "lineboundary" moves to the visual start of the line
-					selection.modify("move", "backward", "lineboundary");
-				} catch (e) {
-					// Fallback if browser doesn't support modify (unlikely in Obsidian)
-					console.warn("Failed to move cursor to start", e);
+				if (selection && selection.rangeCount > 0) {
+					try {
+						selection.modify("move", "backward", "lineboundary");
+					} catch (e) {
+						console.warn("Failed to move cursor to start", e);
+					}
 				}
-			}
 
-			await new Promise((resolve) => setTimeout(resolve, 1));
+				await new Promise((resolve) => setTimeout(resolve, 1));
 
-			// 2. Dispatch the synthetic Tab event
-			if (activeElement) {
-				const event = new KeyboardEvent("keydown", {
-					bubbles: true,
-					cancelable: true,
-					key: "Tab",
-					code: "Tab",
-					shiftKey: isOutdent, // Shift+Tab = Outdent
-				});
-				activeElement.dispatchEvent(event);
-			}
+				if (activeElement) {
+					const event = new KeyboardEvent("keydown", {
+						bubbles: true,
+						cancelable: true,
+						key: "Tab",
+						code: "Tab",
+						shiftKey: isOutdent,
+					});
+					activeElement.dispatchEvent(event);
+				}
 
-			await new Promise((resolve) => setTimeout(resolve, 1));
+				await new Promise((resolve) => setTimeout(resolve, 1));
 
-			// 3. Move cursor back to original position
-			if (selection && selection.rangeCount > 0) {
-				selection.collapse(selection.focusNode, originalOffset);
-			}
+				if (selection && selection.focusNode) {
+					selection.collapse(selection.focusNode, originalOffset);
+				}
+			})();
 		}, 0);
 	};
 

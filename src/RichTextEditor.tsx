@@ -3,8 +3,6 @@ import { oneDark } from "@codemirror/theme-one-dark";
 import {
 	BlockTypeSelect,
 	BoldItalicUnderlineToggles,
-	Button,
-	ButtonWithTooltip,
 	codeBlockPlugin,
 	codeMirrorPlugin,
 	CodeToggle,
@@ -24,7 +22,6 @@ import {
 	MDXEditor,
 	MDXEditorMethods,
 	quotePlugin,
-	Separator,
 	StrikeThroughSupSubToggles,
 	tablePlugin,
 	thematicBreakPlugin,
@@ -71,8 +68,6 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 		useImperativeHandle(ref, () => ({
 			// Logic A: Update Title Bar state
 			setTitle: (newTitle: string) => {
-				console.log("setting internal title " + newTitle);
-
 				setInternalTitle(newTitle);
 			},
 			// Logic B: Proxy the setMarkdown call to the library
@@ -138,7 +133,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 
 			const editable = hostRef.current.querySelector(
 				".mxeditor-content-editable",
-			) as HTMLElement | null;
+			);
 			if (!editable) {
 				return;
 			}
@@ -151,9 +146,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 					return;
 				}
 
-				const li = target.closest(
-					'li[role="checkbox"]',
-				) as HTMLElement | null;
+				const li = target.closest('li[role="checkbox"]');
 				if (!li) {
 					return;
 				}
@@ -293,12 +286,16 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 					placeholder="Title"
 					onChange={(e) => setValue(e.target.value)}
 					// Save when user clicks away
-					onBlur={handleSave}
+					onBlur={() => {
+						handleSave().catch((err) => {
+							console.error("Failed to save title:", err);
+						});
+					}}
 					// Save when user hits Enter
-					onKeyDown={(e) => {
+					onKeyDown={async (e) => {
 						if (e.key === "Enter") {
 							e.preventDefault();
-							handleSave();
+							await handleSave();
 							setTimeout(() => {
 								// 1. Get the actual content editable root
 								const root = hostRef.current?.querySelector(
@@ -383,14 +380,14 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 								return await props.onImageUpload(image);
 							},
 							// 2. Handle Viewing (resolve vault paths to viewable URLs)
-							imagePreviewHandler: async (
-								imageSource: string,
-							) => {
+							imagePreviewHandler: (imageSource: string) => {
 								if (imageSource.startsWith("http")) {
-									return imageSource;
+									return Promise.resolve(imageSource);
 								}
-								// The return value will be automatically wrapped in a Promise
-								return props.onResolveImage(imageSource);
+								// Explicitly return a promise to satisfy the type requirement
+								return Promise.resolve(
+									props.onResolveImage(imageSource),
+								);
 							},
 						}),
 						linkPlugin(),
