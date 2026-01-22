@@ -337,6 +337,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 					markdown={props.text}
 					onChange={handleContentChange}
 					contentEditableClassName="mxeditor-content-editable"
+					suppressHtmlProcessing={true}
 					plugins={[
 						toolbarPlugin({
 							toolbarContents: () => (
