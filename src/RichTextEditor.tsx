@@ -38,9 +38,6 @@ import {
 import { createPortal } from "react-dom";
 import { IndentControls } from "./IndentControls";
 import { tagLinkPlugin } from "./tagLinkPlugin";
-import { $isLinkNode } from "@lexical/link";
-import { lastLexicalEditor } from "./tagLinkPlugin";
-import { $getNodeByKey } from "lexical";
 
 interface Props {
 	title: string;

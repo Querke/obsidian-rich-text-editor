@@ -20,8 +20,9 @@ export class RichTextOverlay {
 		const existingOverlay =
 			this.view.contentEl.querySelector(".rich-text-overlay");
 
+		// Reusing a container that already has a React Root causes crashes/state issues.
 		if (existingOverlay) {
-			this.container = existingOverlay as HTMLElement;
+			existingOverlay.remove();
 		}
 
 		this.container.addClass("rich-text-overlay");

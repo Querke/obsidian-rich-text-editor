@@ -50,9 +50,11 @@ export default class RichTextPlugin extends Plugin {
 		);
 
 		// 3. Initial Check: Inject into currently open leaves
-		this.app.workspace.iterateAllLeaves((leaf) => {
-			this.injectOverlay(leaf);
-			this.addSwitchButton(leaf);
+		this.app.workspace.onLayoutReady(() => {
+			this.app.workspace.iterateAllLeaves((leaf) => {
+				this.injectOverlay(leaf);
+				this.addSwitchButton(leaf);
+			});
 		});
 
 		// add toggle to file menu select
