@@ -212,9 +212,7 @@ export default class RichTextPlugin extends Plugin {
 	}
 
 	updateSwitchButtonIcon(leaf: WorkspaceLeaf) {
-		const action = (leaf.view as RichTextView).__richTextSwitchAction as
-			| HTMLElement
-			| undefined;
+		const action = (leaf.view as RichTextView).__richTextSwitchAction;
 		if (!action) return;
 
 		// NEW: Detect reading mode

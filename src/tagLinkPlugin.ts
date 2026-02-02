@@ -23,8 +23,6 @@ type TagMatch = {
 	fullText: string;
 };
 
-export let lastLexicalEditor: LexicalEditor | null = null;
-
 function tryMatchTag(beforeCaretText: string): TagMatch | null {
 	// Match the last token ending at caret: "... #my/tag-1"
 	const re = /(^|[\s([{>])#([A-Za-z0-9_/-]+)$/;
@@ -57,8 +55,6 @@ export const tagLinkPlugin = realmPlugin({
 		realm.pub(addActivePlugin$, "tag-link");
 
 		realm.pub(createRootEditorSubscription$, (editor) => {
-			lastLexicalEditor = editor;
-
 			return editor.registerCommand(
 				KEY_SPACE_COMMAND,
 				() => {
@@ -98,18 +94,14 @@ export const tagLinkPlugin = realmPlugin({
 							endOffset,
 						);
 
-						console.log("parts", parts);
 						if (parts.length < 2) {
 							return;
 						}
 
 						const tagTextNode = parts[1];
 						const url = "tag:" + match.tag;
-						console.log("url ", url);
 						const linkNode = $createLinkNode(url);
-						console.log("linknode", linkNode);
 						const linkTextNode = $createTextNode(match.fullText);
-						console.log("linknode text", linkTextNode);
 
 						linkNode.append(linkTextNode);
 						tagTextNode.replace(linkNode);
