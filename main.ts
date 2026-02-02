@@ -12,7 +12,7 @@ import "./src/view.css";
 import "./src/mdxeditor.css";
 
 interface RichTextView extends View {
-	__richTextSwitchAction: HTMLElement;
+	__richTextSwitchAction?: HTMLElement;
 	__hasRichTextSwitch?: boolean;
 }
 
@@ -65,16 +65,15 @@ export default class RichTextPlugin extends Plugin {
 					// We simply add a checkable item.
 					// Note: It will appear at the bottom of the menu (standard plugin behavior).
 					menu.addItem((item) => {
-						item.setTitle("Rich text mode")
-							.setChecked(this.settings.isDefaultEditor) // <-- Makes it a toggle
-							.onClick(() => {
-								// Use the specific leaf if clicked from header, otherwise active leaf
-								const targetLeaf =
-									leaf || this.app.workspace.getLeaf(false);
-								if (targetLeaf) {
-									void this.toggleMode(targetLeaf);
-								}
-							});
+						item.setIcon("candy");
+						item.setTitle("Toggle rich text mode").onClick(() => {
+							// Use the specific leaf if clicked from header, otherwise active leaf
+							const targetLeaf =
+								leaf || this.app.workspace.getLeaf(false);
+							if (targetLeaf) {
+								void this.toggleMode(targetLeaf);
+							}
+						});
 					});
 				}
 			}),
@@ -102,17 +101,31 @@ export default class RichTextPlugin extends Plugin {
 	}
 
 	onunload() {
-		// Cleanup: Remove all our overlays
 		this.app.workspace.iterateAllLeaves((leaf) => {
+			// 1. Existing Cleanup: Remove overlays
 			const overlay = this.overlays.get(leaf);
 			if (overlay) {
-				if (leaf.view.getViewType() != "markdown") {
-					return;
+				if (leaf.view.getViewType() === "markdown") {
+					const container = (leaf.view as ItemView).contentEl;
+					container.removeClass("is-rich-text-mode");
+				}
+				overlay.destroy();
+			}
+
+			// 2. NEW Cleanup: Remove the "Candy" button and reset flags
+			if (leaf.view.getViewType() === "markdown") {
+				const richView = leaf.view as RichTextView;
+
+				// Remove the actual button from the DOM
+				if (richView.__richTextSwitchAction) {
+					richView.__richTextSwitchAction.remove();
+					delete richView.__richTextSwitchAction;
 				}
 
-				const container = (leaf.view as ItemView).contentEl;
-				overlay.destroy();
-				container.removeClass("is-rich-text-mode");
+				// Reset the flag so onload() knows to add it again
+				if (richView.__hasRichTextSwitch) {
+					delete richView.__hasRichTextSwitch;
+				}
 			}
 		});
 	}
