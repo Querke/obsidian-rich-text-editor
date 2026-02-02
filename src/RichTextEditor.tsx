@@ -37,6 +37,10 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { IndentControls } from "./IndentControls";
+import { tagLinkPlugin } from "./tagLinkPlugin";
+import { $isLinkNode } from "@lexical/link";
+import { lastLexicalEditor } from "./tagLinkPlugin";
+import { $getNodeByKey } from "lexical";
 
 interface Props {
 	title: string;
@@ -233,32 +237,40 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 		}
 
 		// Handler for Ctrl + Click on links
-		const handleEditorClick = (e: React.MouseEvent): boolean => {
-			// 1. Check if modifier key is pressed (Ctrl or Meta/Cmd)
-
-			// 2. Find if the target is (or is inside) an anchor tag
+		const handleEditorClick = (e: React.MouseEvent) => {
 			const target = e.target as HTMLElement;
 			const anchor = target.closest("a");
-
-			if (!anchor) return false;
-
-			// 3. Get the HREF
-			const href = anchor.getAttribute("href");
-			if (!href) return false;
-
-			// 4. Ignore external links (let browser/Obsidian handle http)
-			if (href.startsWith("http://") || href.startsWith("https://"))
+			if (!anchor) {
 				return false;
+			}
 
-			// 5. It's an internal link! Stop editing and navigate.
+			const href = anchor.getAttribute("href");
+			if (!href) {
+				return;
+			}
+
 			e.preventDefault();
 			e.stopPropagation();
 
-			// Decode URI (e.g. "Three%20Laws" -> "Three Laws")
-			const decodedPath = decodeURI(href);
-			props.onNavigate(decodedPath);
+			// Lexical may sanitize custom schemes => href becomes about:blank.
+			// In that case, use the rendered link text as the source of truth.
+			const text = (anchor.textContent ?? "").trim();
+			if (
+				href === "about:blank" &&
+				text.startsWith("#") &&
+				text.length > 1
+			) {
+				const tag = text.slice(1);
+				window.open(
+					"obsidian://search?query=" +
+						encodeURIComponent("tag:#" + tag),
+					"_blank",
+					"noopener,noreferrer",
+				);
+				return;
+			}
 
-			return true;
+			window.open(href, "_blank", "noopener,noreferrer");
 		};
 
 		const TitleBar = () => {
@@ -328,7 +340,10 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 				ref={hostRef}
 				className="react-root"
 				onClick={(e) => {
-					if (!handleEditorClick(e)) focusEditor(e);
+					focusEditor(e);
+				}}
+				onMouseDownCapture={(e) => {
+					handleEditorClick(e);
 				}}
 			>
 				<MDXEditor
@@ -386,6 +401,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 							},
 						}),
 						linkPlugin(),
+						tagLinkPlugin(),
 						linkDialogPlugin(),
 						codeBlockPlugin({ defaultCodeBlockLanguage: "js" }),
 						codeMirrorPlugin({

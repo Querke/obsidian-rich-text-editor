@@ -87,6 +87,20 @@ export class RichTextOverlay {
 			"\n".repeat(Math.floor(m.length / 2)),
 		);
 
+		output = output.replace(
+			/\[([^\]]+)\]\((tag:([^)]+))\)/g,
+			(match, label, fullUrl, tag) => {
+				// label is typically "#tag", but we don't rely on it
+				const cleanTag = String(tag).trim();
+				if (cleanTag.length === 0) {
+					return match;
+				}
+
+				// Option 1 (recommended): plain tag syntax in Obsidian
+				return `#${cleanTag}`;
+			},
+		);
+
 		// Match standard markdown links: [Label](Url)
 		output = output.replace(
 			/\[([^\]]+)\]\(([^)]+)\)/g,
@@ -123,6 +137,18 @@ export class RichTextOverlay {
 	obsidianToMdx = (obsidian: string) => {
 		// 1. Normalize line endings
 		let normalized = obsidian.replace(/\r\n/g, "\n");
+
+		// --- TAGS: #tag -> [#tag](tag:tag) ---
+		normalized = normalized.replace(
+			/(^|[\s([{>])#([A-Za-z0-9_/-]+)\b/gm,
+			(match, prefix, tag) => {
+				const cleanTag = String(tag).trim();
+				if (cleanTag.length === 0) {
+					return match;
+				}
+				return `${prefix}[#${cleanTag}](tag:${cleanTag})`;
+			},
+		);
 
 		// A. Handle Aliased Wikilinks: [[Link|Alias]] -> [Alias](Link)
 		normalized = normalized.replace(

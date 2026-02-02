@@ -178,3 +178,25 @@ blockquote {
 	font-family: var(--inline-title-font);
 	letter-spacing: -0.015em;
 }
+
+/* render tags as a pill / badge */
+.mxeditor-content-editable a[href^="about:blank"] {
+	color: var(--tag-color);
+	background-color: var(--tag-background);
+	border-radius: 999px;
+	border: var(--tag-border-width) solid var(--tag-border-color);
+	font-weight: var(--tag-weight);
+	font-size: var(--tag-size);
+	padding-inline-start: var(--tag-padding-x);
+	padding-inline-end: var(--tag-padding-x);
+	text-decoration: none;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	margin: 0 0.15rem;
+	transition: background-color 0.2s ease;
+}
+
+.mxeditor-content-editable a[href^="tag:"]:hover {
+	filter: brightness(1.15);
+}
