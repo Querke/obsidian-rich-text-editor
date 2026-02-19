@@ -1,7 +1,7 @@
 {
 	"id": "rich-text-editor",
 	"name": "Rich Text Editor",
-	"version": "1.1.1",
+	"version": "1.1.2",
 	"minAppVersion": "1.5.0",
 	"description": "A rich text markdown editor based on MDXEditor.",
 	"author": "Simon Tysland",
