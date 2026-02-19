@@ -16,6 +16,14 @@ export class RichTextOverlay {
 	constructor(public view: MarkdownView) {
 		// Create the container inside the view's content element
 		this.container = document.createElement("div");
+
+		if (!this.view.contentEl) {
+			console.warn(
+				"RichTextOverlay: No contentEl found on view. Skipping initialization.",
+			);
+			return;
+		}
+
 		// Check if the container already contains the Rich Text Overlay
 		const existingOverlay =
 			this.view.contentEl.querySelector(".rich-text-overlay");
@@ -223,30 +231,32 @@ export class RichTextOverlay {
 
 	update() {
 		if (this.editorRef) {
-			const newText = this.view.editor.getValue();
-
-			// console.log(
-			// 	"obsidian text before convert",
-			// 	JSON.stringify(newText),
-			// );
-
-			const cleanText = this.obsidianToMdx(newText);
-			// console.log(
-			// 	"obsidian text after convert",
-			// 	JSON.stringify(cleanText),
-			// );
-
-			this.editorRef.setMarkdown(cleanText);
-			this.editorRef.setTitle(this.view.file?.basename || "Untitled");
+			try {
+				const newText = this.view.editor.getValue();
+				const cleanText = this.obsidianToMdx(newText);
+				this.editorRef.setMarkdown(cleanText);
+				this.editorRef.setTitle(this.view.file?.basename || "Untitled");
+			} catch (e) {
+				console.error(
+					"RichTextOverlay: Failed to update editor content",
+					e,
+				);
+			}
 		} else {
 			this.render();
 		}
 	}
 
 	render() {
-		if (!this.root) return;
+		if (!this.root || !this.view.editor) return;
 
-		let initialText = this.obsidianToMdx(this.view.editor.getValue());
+		let initialText = "";
+		try {
+			initialText = this.obsidianToMdx(this.view.editor.getValue());
+		} catch (e) {
+			console.error("RichTextOverlay: Conversion failed", e);
+			return;
+		}
 
 		const file = this.view.file;
 
@@ -266,43 +276,46 @@ export class RichTextOverlay {
 			}
 		};
 
-		this.root.render(
-			<StrictMode>
-				<RichTextEditor
-					ref={(node) => {
-						this.editorRef = node;
-					}}
-					title={file?.basename || "Untitled"}
-					text={initialText}
-					onSave={(newText) => {
-						// console.log(
-						// 	"mdx before convert",
-						// 	JSON.stringify(newText),
-						// );
-						const cleanText = this.mdxToObsidian(newText);
-						// console.log(
-						// 	"mdx text after convert: ",
-						// 	JSON.stringify(cleanText),
-						// );
-
-						this.view.editor.setValue(cleanText);
-						this.view.requestSave();
-					}}
-					// Simple rename handler
-					onRename={handleRename}
-					onImageUpload={(file) => this.handleImageUpload(file)}
-					onResolveImage={this.resolveImagePath}
-					onNavigate={(path) => {
-						// Use the void operator to handle the promise returned by openLinkText
-						void this.view.app.workspace.openLinkText(
-							path,
-							this.view.file?.path || "",
-							false,
-						);
-					}}
-				/>
-			</StrictMode>,
-		);
+		try {
+			this.root.render(
+				<StrictMode>
+					<RichTextEditor
+						ref={(node) => {
+							this.editorRef = node;
+						}}
+						title={file?.basename || "Untitled"}
+						text={initialText}
+						onSave={(newText) => {
+							try {
+								const cleanText = this.mdxToObsidian(newText);
+								this.view.editor.setValue(cleanText);
+								this.view.requestSave();
+							} catch (e) {
+								console.error(
+									"RichTextOverlay: Save conversion failed",
+									e,
+								);
+							}
+						}}
+						// Simple rename handler
+						onRename={handleRename}
+						onImageUpload={(file) => this.handleImageUpload(file)}
+						onResolveImage={this.resolveImagePath}
+						onNavigate={(path) => {
+							// Use the void operator to handle the promise returned by openLinkText
+							void this.view.app.workspace.openLinkText(
+								path,
+								this.view.file?.path || "",
+								false,
+							);
+						}}
+					/>
+				</StrictMode>,
+			);
+		} catch (e) {
+			console.error("RichTextOverlay: Render failed", e);
+			console.error("Diagnostic - Problematic Markdown:", initialText);
+		}
 	}
 
 	destroy() {

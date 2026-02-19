@@ -144,6 +144,8 @@ export default class RichTextPlugin extends Plugin {
 				},
 			);
 
+			if (!switchAction) return;
+
 			(leaf.view as RichTextView).__richTextSwitchAction = switchAction;
 			this.updateSwitchButtonIcon(leaf);
 
@@ -165,6 +167,10 @@ export default class RichTextPlugin extends Plugin {
 			this.overlays.delete(leaf);
 			overlay = undefined;
 		}
+
+		// Safety Check: Ensure the view has a content element before injecting
+		const view = leaf.view as ItemView;
+		if (!view.contentEl) return;
 
 		// If we have a valid, living overlay, reuse it
 		if (overlay) {
@@ -194,6 +200,8 @@ export default class RichTextPlugin extends Plugin {
 
 		const view = leaf.view as ItemView;
 		const container = view.contentEl;
+		if (!container) return;
+
 		const overlay = this.overlays.get(leaf);
 
 		const isReadingMode = view.getState().mode === "preview";
