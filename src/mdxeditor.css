@@ -22,12 +22,9 @@
 	margin: 0 !important;
 }
 
-.mdxeditor-root-contenteditable li[role="checkbox"] {
-	margin-inline-start: -24px !important;
-}
-
 /* 1. Layout: Ensure flexbox so text takes full width */
 .mdxeditor-root-contenteditable li[role="checkbox"] {
+	margin-inline-start: -24px !important;
 	display: flex !important;
 	align-items: flex-start !important;
 	position: relative !important;
@@ -88,10 +85,6 @@ li[role="checkbox"]:focus-within {
 	font-family: var(--font-monospace);
 }
 
-li[role="checkbox"]:focus,
-li[role="checkbox"]:focus-within {
-	outline: none;
-}
 .mdxeditor-popup-container {
 	position: fixed !important;
 	top: 0;
@@ -186,14 +179,7 @@ div[class*="_dialogContent_"] input {
 
 /** Diff viewer */
 
-.mdxeditor .cm-mergeView .cm-scroller {
-	font-family: var(--font-mono);
-	line-height: 1.3rem;
-	font-size: var(--text-xs);
-}
-
-/** Diff viewer */
-
+.mdxeditor .cm-mergeView .cm-scroller,
 .mdxeditor .cm-sourceView .cm-scroller {
 	font-family: var(--font-mono);
 	line-height: 1.3rem;
@@ -1643,7 +1629,7 @@ mark {
 
 ._rootContentEditableWrapper_1e2ox_1119 {
 	position: relative;
-	cursor: text;
+	/* cursor: text; */
 }
 
 ._downshiftContainer_1e2ox_1123 {

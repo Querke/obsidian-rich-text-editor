@@ -64,11 +64,6 @@
 	touch-action: pan-y pinch-zoom;
 }
 
-.mdxeditor-root-contenteditable {
-	padding-left: 24px;
-	padding-right: 24px;
-}
-
 .rich-text-overlay.is-mobile .mdxeditor-toolbar {
 	position: fixed;
 	top: auto !important;
@@ -100,8 +95,12 @@
 
 /* Make the editable area take available space */
 .mdxeditor-root-contenteditable {
+	padding-left: 24px;
+	padding-right: 24px;
 	flex-grow: 1;
 	overflow-y: auto;
+	display: flex;
+	flex-direction: column;
 }
 
 .rich-text-overlay.is-readable-line-width
@@ -149,16 +148,15 @@ blockquote {
 .mdxeditor-root-contenteditable,
 .mxeditor-content-editable {
 	flex: 1 1 0;
-	min-height: 0 !important;
+	padding-bottom: 48px;
 }
 
 .rich-text-view-root {
 	background-color: var(--background-primary) !important;
 }
 
-.mxeditor :has(> .mxeditor-content-editable) {
-	height: 100%;
-	min-height: 0;
+.mdxeditor-root-contenteditable > div {
+	min-height: 100%;
 	display: flex;
 	flex-direction: column;
 }

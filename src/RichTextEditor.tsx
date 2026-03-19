@@ -336,9 +336,6 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 			<div
 				ref={hostRef}
 				className="react-root"
-				onClick={(e) => {
-					focusEditor(e);
-				}}
 				onMouseDownCapture={(e) => {
 					handleEditorClick(e);
 				}}
