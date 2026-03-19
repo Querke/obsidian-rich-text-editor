@@ -13,6 +13,9 @@ export class RichTextOverlay {
 	private renameRef: EventRef;
 	private editorRef: RichTextEditorRef | null = null;
 
+	private resizeObserver?: ResizeObserver;
+	private relayoutTimer?: number;
+
 	constructor(public view: MarkdownView) {
 		// Create the container inside the view's content element
 		this.container = document.createElement("div");
@@ -53,6 +56,23 @@ export class RichTextOverlay {
 		// We use the view's app scope as the base
 		this.scope = new Scope(this.view.app.scope);
 		this.parentScope = this.view.scope; // Save the original markdown scope
+
+		// On mobile, watch for dimension changes (sidebar open/close) and
+		// force the scroll container to recalculate. iOS WebKit can lose track
+		// of scroll dimensions after transform-based sidebar animations.
+		// @ts-ignore
+		if (this.view.app.isMobile && this.view.contentEl) {
+			this.resizeObserver = new ResizeObserver(() => {
+				if (this.relayoutTimer) {
+					window.clearTimeout(this.relayoutTimer);
+				}
+				// Debounce so we only fire once the animation settles
+				this.relayoutTimer = window.setTimeout(() => {
+					this.forceScrollRecalc();
+				}, 150);
+			});
+			this.resizeObserver.observe(this.view.contentEl);
+		}
 
 		this.scope.register(["Mod"], "b", (evt: KeyboardEvent) => {
 			evt.preventDefault();
@@ -318,7 +338,30 @@ export class RichTextOverlay {
 		}
 	}
 
+	/**
+	 * Force iOS WebKit to recalculate the scroll container dimensions.
+	 * After sidebar animations, the browser can cache stale scroll dimensions,
+	 * making vertical scrolling appear frozen.
+	 */
+	forceScrollRecalc() {
+		const scrollable = this.container.querySelector(
+			".mdxeditor-root-contenteditable",
+		) as HTMLElement;
+		if (!scrollable) return;
+
+		scrollable.style.overflowY = "hidden";
+		void scrollable.offsetHeight; // force reflow
+		scrollable.style.overflowY = "";
+	}
+
 	destroy() {
+		if (this.resizeObserver) {
+			this.resizeObserver.disconnect();
+		}
+		if (this.relayoutTimer) {
+			window.clearTimeout(this.relayoutTimer);
+		}
+
 		this.view.app.vault.offref(this.renameRef);
 
 		this.toggleScope(false);

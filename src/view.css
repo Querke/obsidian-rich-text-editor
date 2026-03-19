@@ -58,6 +58,12 @@
 	padding-bottom: 52px !important;
 }
 
+/* Allow horizontal swipe gestures to pass through to Obsidian's sidebar handler.
+   Without this, the scroll container claims touch events and blocks sidebar swipes. */
+.rich-text-overlay.is-mobile {
+	touch-action: pan-y pinch-zoom;
+}
+
 .mdxeditor-root-contenteditable {
 	padding-left: 24px;
 	padding-right: 24px;

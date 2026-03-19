@@ -80,10 +80,12 @@ export default class RichTextPlugin extends Plugin {
 		);
 
 		// Trigger visibility check whenever the layout changes (e.g., switching to Reading Mode)
+		// Also force scroll recalculation for mobile sidebar transitions
 		this.registerEvent(
 			this.app.workspace.on("layout-change", () => {
 				this.app.workspace.iterateAllLeaves((leaf) => {
 					this.updateVisibility(leaf);
+					this.overlays.get(leaf)?.forceScrollRecalc();
 				});
 			}),
 		);
