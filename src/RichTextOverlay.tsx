@@ -349,9 +349,9 @@ export class RichTextOverlay {
 		) as HTMLElement;
 		if (!scrollable) return;
 
-		scrollable.style.overflowY = "hidden";
+		scrollable.addClass("scroll-recalc");
 		void scrollable.offsetHeight; // force reflow
-		scrollable.style.overflowY = "";
+		scrollable.removeClass("scroll-recalc");
 	}
 
 	destroy() {
