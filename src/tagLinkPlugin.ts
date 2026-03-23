@@ -10,7 +10,6 @@ import {
 	$isRangeSelection,
 	COMMAND_PRIORITY_LOW,
 	KEY_SPACE_COMMAND,
-	LexicalEditor,
 	TextNode,
 } from "lexical";
 

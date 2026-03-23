@@ -224,15 +224,6 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 			props.onSave(newMarkdown);
 		};
 
-		function focusEditor(e: React.MouseEvent<HTMLDivElement>): void {
-			const target = e.target as HTMLElement;
-
-			// Check if the clicked element has the specific class
-			if (target.classList.contains("mdxeditor-root-contenteditable")) {
-				editorRef.current?.focus();
-			}
-		}
-
 		// Handler for Ctrl + Click on links
 		const handleEditorClick = (e: React.MouseEvent) => {
 			const target = e.target as HTMLElement;
