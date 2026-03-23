@@ -79,13 +79,11 @@ export default class RichTextPlugin extends Plugin {
 			}),
 		);
 
-		// Trigger visibility check whenever the layout changes (e.g., switching to Reading Mode)
-		// Also force scroll recalculation for mobile sidebar transitions
+			// Trigger visibility check whenever the layout changes (e.g., switching to Reading Mode)
 		this.registerEvent(
 			this.app.workspace.on("layout-change", () => {
 				this.app.workspace.iterateAllLeaves((leaf) => {
 					this.updateVisibility(leaf);
-					this.overlays.get(leaf)?.forceScrollRecalc();
 				});
 			}),
 		);
@@ -207,11 +205,19 @@ export default class RichTextPlugin extends Plugin {
 		const overlay = this.overlays.get(leaf);
 
 		const isReadingMode = view.getState().mode === "preview";
+		const shouldShow = this.settings.isDefaultEditor && !isReadingMode;
+		const isShowing = container.hasClass("is-rich-text-mode");
 
 		// Only show rich text if setting is ON AND we are NOT in reading mode
-		if (this.settings.isDefaultEditor && !isReadingMode) {
+		if (shouldShow) {
 			container.addClass("is-rich-text-mode");
-			overlay?.update();
+			// Only sync content when transitioning from hidden to visible.
+			// Calling update() on every layout-change (e.g. sidebar open/close)
+			// replaces the editor content via setMarkdown(), which destroys
+			// MDXEditor's internal scroll position.
+			if (!isShowing) {
+				overlay?.update();
+			}
 			overlay?.toggleScope(true);
 		} else {
 			container.removeClass("is-rich-text-mode");

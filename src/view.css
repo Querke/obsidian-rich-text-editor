@@ -103,12 +103,6 @@
 	flex-direction: column;
 }
 
-/* Temporarily hide overflow to force iOS WebKit to recalculate scroll dimensions
-   after sidebar animations. Toggled by forceScrollRecalc(). */
-.mdxeditor-root-contenteditable.scroll-recalc {
-	overflow-y: hidden;
-}
-
 .rich-text-overlay.is-readable-line-width
 	.mdxeditor-root-contenteditable
 	> :first-child {
