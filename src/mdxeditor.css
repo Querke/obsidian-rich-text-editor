@@ -38,6 +38,11 @@
 	pointer-events: auto !important;
 	cursor: pointer !important;
 	flex-shrink: 0 !important;
+	margin-inline-end: 6px !important;
+	-webkit-user-select: none;
+	user-select: none;
+	-webkit-touch-callout: none;
+	touch-action: manipulation;
 }
 
 /* 3. Text: Re-enable clicks for the text and make it fill the space */
@@ -52,6 +57,8 @@
 	/* Fix z-index to ensure it sits above the list item background */
 	position: relative !important;
 	z-index: 1 !important;
+
+	margin-left: 4px;
 }
 
 /* 4. Visuals: Remove the focus ring entirely */
@@ -64,12 +71,12 @@ li[role="checkbox"]:focus-within {
 /* Center the task checkbox box vertically */
 .mdxeditor-root-contenteditable li[class*="_listItemUnchecked_"]::before,
 .mdxeditor-root-contenteditable li[class*="_listItemChecked_"]::before {
-	transform: translateY(5px);
+	transform: translateY(4px);
 }
 
 /* Center the checkmark (the ::after on checked items) vertically too */
 .mdxeditor-root-contenteditable li[class*="_listItemChecked_"]::after {
-	transform: translateY(5px) rotate(45deg);
+	transform: translateY(4px) rotate(45deg);
 }
 
 .mxeditor-content-editable h1,
@@ -2168,6 +2175,10 @@ form._multiFieldForm_1e2ox_1214 ._formField_1e2ox_1220 label {
 
 ._listitem_1tncs_69 {
 	margin: var(--spacing-2) 0;
+}
+
+._listitem_1tncs_69 > span {
+	margin-left: 6px !important;
 }
 
 ._listItemChecked_1tncs_73,

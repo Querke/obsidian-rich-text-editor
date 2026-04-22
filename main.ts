@@ -131,12 +131,11 @@ export default class RichTextPlugin extends Plugin {
 	}
 
 	addSwitchButton(leaf: WorkspaceLeaf) {
-		if (leaf.view.getViewType() === "markdown") {
+		if (leaf.view.getViewType() === "markdown" && leaf.view instanceof ItemView) {
 			// Check a custom flag to prevent duplicate buttons
 			if ((leaf.view as RichTextView).__hasRichTextSwitch) return;
 
-			// FIX: Cast to ItemView to access addAction
-			const switchAction = (leaf.view as ItemView).addAction(
+			const switchAction = leaf.view.addAction(
 				"candy",
 				"Switch to Rich Text",
 				() => {

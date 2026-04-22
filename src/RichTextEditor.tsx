@@ -36,6 +36,8 @@ import {
 	useState,
 } from "react";
 import { createPortal } from "react-dom";
+import { $getNearestNodeFromDOMNode } from "lexical";
+import { $isListItemNode } from "@lexical/list";
 import { IndentControls } from "./IndentControls";
 import { tagLinkPlugin } from "./tagLinkPlugin";
 
@@ -134,7 +136,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 
 			const editable = hostRef.current.querySelector(
 				".mxeditor-content-editable",
-			);
+			) as HTMLElement | null;
 			if (!editable) {
 				return;
 			}
@@ -166,6 +168,74 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 				// Only allow Lexical to toggle when clicking in the checkbox gutter
 				if (xFromStart > checkboxHitWidthPx) {
 					evt.stopImmediatePropagation();
+				}
+			};
+
+			// iOS-specific: touchstart fires before the native context menu decision.
+			// Calling preventDefault() here blocks the iOS "Paste / Select" menu that
+			// appears when the user taps near the caret inside a contenteditable.
+			// Because preventDefault() also suppresses the subsequent click event,
+			// we stash the li and fire a synthetic click on touchend ourselves.
+			let pendingCheckboxLi: Element | null = null;
+
+			const onTouchStartCapture = (evt: Event) => {
+				const touchEvt = evt as TouchEvent;
+				const touch = touchEvt.touches[0];
+				const target = document.elementFromPoint(
+					touch.clientX,
+					touch.clientY,
+				) as HTMLElement | null;
+				const li = target?.closest('li[role="checkbox"]');
+				if (!li) return;
+
+				const rect = li.getBoundingClientRect();
+				const dir = window.getComputedStyle(li).direction;
+				const xFromStart =
+					dir === "rtl"
+						? rect.right - touch.clientX
+						: touch.clientX - rect.left;
+
+				if (xFromStart <= checkboxHitWidthPx) {
+					evt.preventDefault();
+					pendingCheckboxLi = li;
+				}
+			};
+
+			const onTouchEndCapture = (_evt: Event) => {
+				if (!pendingCheckboxLi) return;
+				const li = pendingCheckboxLi;
+				pendingCheckboxLi = null;
+
+				// Toggle via Lexical directly — avoids the editor.focus() call
+				// that Lexical's own click handler makes, which would pop up the
+				// iOS keyboard and scroll the caret into view.
+				const contentEditable = hostRef.current?.querySelector(
+					".mxeditor-content-editable",
+				) as HTMLElement | null;
+				const lexicalEditor = (contentEditable as any)?.__lexicalEditor;
+				if (!lexicalEditor) return;
+
+				const wasEditorFocused =
+					!!contentEditable &&
+					(contentEditable === document.activeElement ||
+						contentEditable.contains(document.activeElement));
+
+				lexicalEditor.update(() => {
+					const node = $getNearestNodeFromDOMNode(li);
+					if ($isListItemNode(node)) {
+						node.setChecked(!node.getChecked());
+					}
+				});
+
+				// If the editor wasn't active before the toggle, blur whatever
+				// Lexical may have focused so the keyboard doesn't appear.
+				if (!wasEditorFocused) {
+					setTimeout(() => {
+						const active = document.activeElement as HTMLElement | null;
+						if (active && editable.contains(active)) {
+							active.blur();
+						}
+					}, 0);
 				}
 			};
 
@@ -209,6 +279,46 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 				true,
 			);
 			editable.addEventListener("keydown", onKeyDownCapture, true);
+			editable.addEventListener("touchstart", onTouchStartCapture, {
+				capture: true,
+				passive: false,
+			});
+			editable.addEventListener("touchend", onTouchEndCapture, true);
+
+			// Strip tabindex from li[role="checkbox"] so iOS never focuses the
+			// li element itself. Without tabindex, tapping the text span naturally
+			// focuses the contenteditable and places the caret at the tap point.
+			const stripTabIndex = (root: Element) => {
+				root
+					.querySelectorAll('li[role="checkbox"]')
+					.forEach((li) => li.removeAttribute("tabindex"));
+			};
+			stripTabIndex(editable);
+
+			const tabIndexObserver = new MutationObserver((mutations) => {
+				for (const mutation of mutations) {
+					if (mutation.type === "childList") {
+						mutation.addedNodes.forEach((node) => {
+							if (!(node instanceof Element)) return;
+							if (node.matches('li[role="checkbox"]'))
+								node.removeAttribute("tabindex");
+							stripTabIndex(node);
+						});
+					} else if (
+						mutation.type === "attributes" &&
+						mutation.target instanceof Element &&
+						mutation.target.matches('li[role="checkbox"]')
+					) {
+						mutation.target.removeAttribute("tabindex");
+					}
+				}
+			});
+			tabIndexObserver.observe(editable, {
+				childList: true,
+				subtree: true,
+				attributes: true,
+				attributeFilter: ["tabindex"],
+			});
 
 			return () => {
 				editable.removeEventListener(
@@ -217,6 +327,17 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 					true,
 				);
 				editable.removeEventListener("keydown", onKeyDownCapture, true);
+				editable.removeEventListener(
+					"touchstart",
+					onTouchStartCapture,
+					true,
+				);
+				editable.removeEventListener(
+					"touchend",
+					onTouchEndCapture,
+					true,
+				);
+				tabIndexObserver.disconnect();
 			};
 		}, []);
 
