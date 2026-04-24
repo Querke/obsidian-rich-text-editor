@@ -134,9 +134,9 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 				return;
 			}
 
-			const editable = hostRef.current.querySelector(
+			const editable: HTMLElement | null = hostRef.current.querySelector(
 				".mxeditor-content-editable",
-			) as HTMLElement | null;
+			);
 			if (!editable) {
 				return;
 			}
@@ -212,6 +212,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 				const contentEditable = hostRef.current?.querySelector(
 					".mxeditor-content-editable",
 				) as HTMLElement | null;
+				// @ts-ignore
 				const lexicalEditor = (contentEditable as any)?.__lexicalEditor;
 				if (!lexicalEditor) return;
 
@@ -231,7 +232,8 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 				// Lexical may have focused so the keyboard doesn't appear.
 				if (!wasEditorFocused) {
 					setTimeout(() => {
-						const active = document.activeElement as HTMLElement | null;
+						const active =
+							document.activeElement as HTMLElement | null;
 						if (active && editable.contains(active)) {
 							active.blur();
 						}
@@ -289,9 +291,9 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 			// li element itself. Without tabindex, tapping the text span naturally
 			// focuses the contenteditable and places the caret at the tap point.
 			const stripTabIndex = (root: Element) => {
-				root
-					.querySelectorAll('li[role="checkbox"]')
-					.forEach((li) => li.removeAttribute("tabindex"));
+				root.querySelectorAll('li[role="checkbox"]').forEach((li) =>
+					li.removeAttribute("tabindex"),
+				);
 			};
 			stripTabIndex(editable);
 
