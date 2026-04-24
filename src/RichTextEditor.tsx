@@ -37,6 +37,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { $getNearestNodeFromDOMNode } from "lexical";
+import type { LexicalEditor } from "lexical";
 import { $isListItemNode } from "@lexical/list";
 import { IndentControls } from "./IndentControls";
 import { tagLinkPlugin } from "./tagLinkPlugin";
@@ -55,6 +56,10 @@ export interface RichTextEditorRef {
 	setTitle: (title: string) => void;
 	setMarkdown: (markdown: string) => void;
 }
+
+type LexicalContentEditable = HTMLElement & {
+	__lexicalEditor?: LexicalEditor;
+};
 
 export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 	(props, ref) => {
@@ -213,7 +218,8 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 					".mxeditor-content-editable",
 				) as HTMLElement | null;
 				// @ts-ignore
-				const lexicalEditor = (contentEditable as any)?.__lexicalEditor;
+				const lexicalEditor = (contentEditable as LexicalContentEditable | null)
+					?.__lexicalEditor;
 				if (!lexicalEditor) return;
 
 				const wasEditorFocused =
