@@ -34,6 +34,7 @@ import {
 	useImperativeHandle,
 	useRef,
 	useState,
+	type MouseEvent as ReactMouseEvent,
 } from "react";
 import { createPortal } from "react-dom";
 import { $getNearestNodeFromDOMNode } from "lexical";
@@ -71,7 +72,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 		const [titleBarContainer, setTitleBarContainer] =
 			useState<HTMLElement | null>(null);
 
-		const isDark = document.body.classList.contains("theme-dark");
+		const isDark = activeDocument.body.classList.contains("theme-dark");
 
 		useImperativeHandle(ref, () => ({
 			// Logic A: Update Title Bar state
@@ -88,7 +89,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 			if (!hostRef.current) return;
 
 			// Wait for MDXEditor to render
-			setTimeout(() => {
+			activeWindow.setTimeout(() => {
 				const root = hostRef.current?.querySelector(
 					".mdxeditor",
 				) as HTMLElement;
@@ -105,8 +106,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 						".custom-titlebar",
 					) as HTMLElement;
 					if (!bar) {
-						bar = document.createElement("div");
-						bar.className = "custom-titlebar";
+						bar = createDiv({ cls: "custom-titlebar" });
 						// Inject at the start of the first child element
 						targetChild.prepend(bar);
 					}
@@ -131,7 +131,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 			};
 
 			// Run quickly after mount to override defaults
-			setTimeout(enableMobileFeatures, 100);
+			activeWindow.setTimeout(enableMobileFeatures, 100);
 		}, []);
 
 		useEffect(() => {
@@ -160,7 +160,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 				}
 
 				const rect = li.getBoundingClientRect();
-				const dir = window.getComputedStyle(li).direction;
+				const dir = activeWindow.getComputedStyle(li).direction;
 
 				let xFromStart = 0;
 
@@ -186,7 +186,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 			const onTouchStartCapture = (evt: Event) => {
 				const touchEvt = evt as TouchEvent;
 				const touch = touchEvt.touches[0];
-				const target = document.elementFromPoint(
+				const target = activeDocument.elementFromPoint(
 					touch.clientX,
 					touch.clientY,
 				) as HTMLElement | null;
@@ -194,7 +194,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 				if (!li) return;
 
 				const rect = li.getBoundingClientRect();
-				const dir = window.getComputedStyle(li).direction;
+				const dir = activeWindow.getComputedStyle(li).direction;
 				const xFromStart =
 					dir === "rtl"
 						? rect.right - touch.clientX
@@ -214,18 +214,16 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 				// Toggle via Lexical directly — avoids the editor.focus() call
 				// that Lexical's own click handler makes, which would pop up the
 				// iOS keyboard and scroll the caret into view.
-				const contentEditable = hostRef.current?.querySelector(
+				const contentEditable = hostRef.current?.querySelector<LexicalContentEditable>(
 					".mxeditor-content-editable",
-				) as HTMLElement | null;
-				// @ts-ignore
-				const lexicalEditor = (contentEditable as LexicalContentEditable | null)
-					?.__lexicalEditor;
+				);
+				const lexicalEditor = contentEditable?.__lexicalEditor;
 				if (!lexicalEditor) return;
 
 				const wasEditorFocused =
 					!!contentEditable &&
-					(contentEditable === document.activeElement ||
-						contentEditable.contains(document.activeElement));
+					(contentEditable === activeDocument.activeElement ||
+						contentEditable.contains(activeDocument.activeElement));
 
 				lexicalEditor.update(() => {
 					const node = $getNearestNodeFromDOMNode(li);
@@ -237,9 +235,9 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 				// If the editor wasn't active before the toggle, blur whatever
 				// Lexical may have focused so the keyboard doesn't appear.
 				if (!wasEditorFocused) {
-					setTimeout(() => {
+					activeWindow.setTimeout(() => {
 						const active =
-							document.activeElement as HTMLElement | null;
+							activeDocument.activeElement as HTMLElement | null;
 						if (active && editable.contains(active)) {
 							active.blur();
 						}
@@ -252,7 +250,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 					return;
 				}
 
-				const selection = window.getSelection();
+				const selection = activeWindow.getSelection();
 				if (!selection) {
 					return;
 				}
@@ -307,14 +305,14 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 				for (const mutation of mutations) {
 					if (mutation.type === "childList") {
 						mutation.addedNodes.forEach((node) => {
-							if (!(node instanceof Element)) return;
+							if (!node.instanceOf(Element)) return;
 							if (node.matches('li[role="checkbox"]'))
 								node.removeAttribute("tabindex");
 							stripTabIndex(node);
 						});
 					} else if (
 						mutation.type === "attributes" &&
-						mutation.target instanceof Element &&
+						mutation.target.instanceOf(Element) &&
 						mutation.target.matches('li[role="checkbox"]')
 					) {
 						mutation.target.removeAttribute("tabindex");
@@ -354,7 +352,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 		};
 
 		// Handler for Ctrl + Click on links
-		const handleEditorClick = (e: React.MouseEvent) => {
+		const handleEditorClick = (e: ReactMouseEvent) => {
 			const target = e.target as HTMLElement;
 			const anchor = target.closest("a");
 			if (!anchor) {
@@ -378,7 +376,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 				text.length > 1
 			) {
 				const tag = text.slice(1);
-				window.open(
+				activeWindow.open(
 					"obsidian://search?query=" +
 						encodeURIComponent("tag:#" + tag),
 					"_blank",
@@ -387,7 +385,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 				return;
 			}
 
-			window.open(href, "_blank", "noopener,noreferrer");
+			activeWindow.open(href, "_blank", "noopener,noreferrer");
 		};
 
 		const TitleBar = () => {
@@ -428,16 +426,16 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 							void (async () => {
 								await handleSave();
 
-								setTimeout(() => {
+								activeWindow.setTimeout(() => {
 									const root = hostRef.current?.querySelector(
 										".mxeditor-content-editable",
 									);
 									if (root) {
-										const range = document.createRange();
+										const range = activeDocument.createRange();
 										range.selectNodeContents(root);
 										range.collapse(true);
 
-										const selection = window.getSelection();
+										const selection = activeWindow.getSelection();
 										if (selection) {
 											selection.removeAllRanges();
 											selection.addRange(range);

@@ -11,11 +11,11 @@ export const IndentControls = (props: Props) => {
 		props.editorRef?.focus();
 
 		// Timeout ensures the editor is focused before manipulation
-		setTimeout(() => {
+		activeWindow.setTimeout(() => {
 			// Prefixing with 'void' marks the promise as intentionally ignored
 			void (async () => {
-				const selection = window.getSelection();
-				const activeElement = document.activeElement;
+				const selection = activeWindow.getSelection();
+				const activeElement = activeDocument.activeElement;
 				const originalOffset = selection?.focusOffset || 0;
 
 				if (selection && selection.rangeCount > 0) {
@@ -26,7 +26,7 @@ export const IndentControls = (props: Props) => {
 					}
 				}
 
-				await new Promise((resolve) => setTimeout(resolve, 1));
+				await new Promise((resolve) => activeWindow.setTimeout(resolve, 1));
 
 				if (activeElement) {
 					const event = new KeyboardEvent("keydown", {
@@ -39,7 +39,7 @@ export const IndentControls = (props: Props) => {
 					activeElement.dispatchEvent(event);
 				}
 
-				await new Promise((resolve) => setTimeout(resolve, 1));
+				await new Promise((resolve) => activeWindow.setTimeout(resolve, 1));
 
 				if (selection && selection.focusNode) {
 					selection.collapse(selection.focusNode, originalOffset);

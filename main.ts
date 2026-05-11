@@ -59,7 +59,7 @@ export default class RichTextPlugin extends Plugin {
 
 		// add toggle to file menu select
 		this.registerEvent(
-			this.app.workspace.on("file-menu", (menu, file, source, leaf) => {
+			this.app.workspace.on("file-menu", (menu, file, _source, leaf) => {
 				// Check if it's a markdown file
 				if (file instanceof TFile && file.extension === "md") {
 					// We simply add a checkable item.
@@ -244,11 +244,8 @@ export default class RichTextPlugin extends Plugin {
 	}
 
 	async loadSettings() {
-		this.settings = Object.assign(
-			{},
-			DEFAULT_SETTINGS,
-			await this.loadData(),
-		);
+		const data = (await this.loadData()) as Partial<RichTextPluginSettings> | null;
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, data ?? {});
 	}
 	async saveSettings() {
 		await this.saveData(this.settings);
