@@ -15,7 +15,7 @@ export class RichTextOverlay {
 
 	constructor(public view: MarkdownView) {
 		// Create the container inside the view's content element
-		this.container = activeDocument.createDiv();
+		this.container = createDiv();
 
 		if (!this.view.contentEl) {
 			console.warn(
