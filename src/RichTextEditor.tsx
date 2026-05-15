@@ -139,7 +139,8 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 				return;
 			}
 
-			const editable: HTMLElement | null = hostRef.current.querySelector(
+			const host = hostRef.current;
+			const editable: HTMLElement | null = host.querySelector(
 				".mxeditor-content-editable",
 			);
 			if (!editable) {
@@ -147,6 +148,17 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 			}
 
 			const checkboxHitWidthPx = 30;
+			const isMobileOverlay = !!host.closest(
+				".rich-text-overlay.is-mobile",
+			);
+			const isMobileTouchDevice =
+				isMobileOverlay && navigator.maxTouchPoints > 0;
+
+			let keyboardDismissTouchStartX: number | null = null;
+			let keyboardDismissTouchStartY: number | null = null;
+			let keyboardDismissPreviousY: number | null = null;
+			let keyboardDismissStartedAboveToolbar = false;
+			let keyboardDismissDidBlur = false;
 
 			const onPointerDownCapture = (evt: PointerEvent) => {
 				const target = evt.target as HTMLElement | null;
@@ -206,7 +218,109 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 				}
 			};
 
+			const onTouchMoveCapture = (evt: Event) => {
+				if (
+					!isMobileTouchDevice ||
+					keyboardDismissTouchStartX === null ||
+					keyboardDismissTouchStartY === null ||
+					keyboardDismissPreviousY === null ||
+					!keyboardDismissStartedAboveToolbar ||
+					keyboardDismissDidBlur
+				) {
+					return;
+				}
+
+				const touchEvt = evt as TouchEvent;
+				if (touchEvt.touches.length !== 1) {
+					keyboardDismissTouchStartX = null;
+					keyboardDismissTouchStartY = null;
+					keyboardDismissPreviousY = null;
+					keyboardDismissStartedAboveToolbar = false;
+					keyboardDismissDidBlur = false;
+					return;
+				}
+
+				const active = document.activeElement as HTMLElement | null;
+				const selection = window.getSelection();
+				const anchorNode = selection?.anchorNode;
+				const anchorElement =
+					anchorNode?.nodeType === Node.ELEMENT_NODE
+						? (anchorNode as Element)
+						: anchorNode?.parentElement;
+				const selectionInEditable =
+					!!anchorElement && editable.contains(anchorElement);
+				const focusInEditable =
+					!!active &&
+					(active === editable || editable.contains(active));
+				const focusInTitle =
+					!!active &&
+					host.contains(active) &&
+					active.matches("input, textarea");
+
+				if (!focusInEditable && !focusInTitle && !selectionInEditable) {
+					keyboardDismissTouchStartX = null;
+					keyboardDismissTouchStartY = null;
+					keyboardDismissPreviousY = null;
+					keyboardDismissStartedAboveToolbar = false;
+					keyboardDismissDidBlur = false;
+					return;
+				}
+
+				const toolbar = host.querySelector(
+					".mdxeditor-toolbar",
+				) as HTMLElement | null;
+				if (!toolbar) {
+					return;
+				}
+
+				const toolbarRect = toolbar.getBoundingClientRect();
+				if (toolbarRect.height <= 0) {
+					return;
+				}
+
+				const touch = touchEvt.touches[0];
+				const deltaX = Math.abs(
+					touch.clientX - keyboardDismissTouchStartX,
+				);
+				const deltaY = touch.clientY - keyboardDismissTouchStartY;
+				const crossedToolbarTop =
+					keyboardDismissPreviousY < toolbarRect.top &&
+					touch.clientY >= toolbarRect.top;
+				const draggedIntoToolbar =
+					touch.clientY >=
+					toolbarRect.top +
+						Math.min(toolbarRect.height * 0.35, 24);
+
+				// Web touch events cannot start on the native keyboard itself, so
+				// use the toolbar directly above it as the keyboard-edge proxy.
+				if (
+					deltaY >= 28 &&
+					deltaY > deltaX + 16 &&
+					(crossedToolbarTop || draggedIntoToolbar)
+				) {
+					keyboardDismissDidBlur = true;
+					keyboardDismissTouchStartX = null;
+					keyboardDismissTouchStartY = null;
+					keyboardDismissPreviousY = null;
+					keyboardDismissStartedAboveToolbar = false;
+					if (active && active !== document.body) {
+						active.blur();
+					} else {
+						editable.blur();
+					}
+					return;
+				}
+
+				keyboardDismissPreviousY = touch.clientY;
+			};
+
 			const onTouchEndCapture = (_evt: Event) => {
+				keyboardDismissTouchStartX = null;
+				keyboardDismissTouchStartY = null;
+				keyboardDismissPreviousY = null;
+				keyboardDismissStartedAboveToolbar = false;
+				keyboardDismissDidBlur = false;
+
 				if (!pendingCheckboxLi) return;
 				const li = pendingCheckboxLi;
 				pendingCheckboxLi = null;
@@ -281,17 +395,94 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 				evt.stopImmediatePropagation();
 			};
 
+			const onTouchCancelCapture = () => {
+				keyboardDismissTouchStartX = null;
+				keyboardDismissTouchStartY = null;
+				keyboardDismissPreviousY = null;
+				keyboardDismissStartedAboveToolbar = false;
+				keyboardDismissDidBlur = false;
+				pendingCheckboxLi = null;
+			};
+
+			const onKeyboardDismissTouchStartCapture = (evt: Event) => {
+				keyboardDismissTouchStartX = null;
+				keyboardDismissTouchStartY = null;
+				keyboardDismissPreviousY = null;
+				keyboardDismissStartedAboveToolbar = false;
+				keyboardDismissDidBlur = false;
+
+				if (!isMobileTouchDevice) {
+					return;
+				}
+
+				const touchEvt = evt as TouchEvent;
+				if (touchEvt.touches.length !== 1) {
+					return;
+				}
+
+				const active = document.activeElement as HTMLElement | null;
+				const selection = window.getSelection();
+				const anchorNode = selection?.anchorNode;
+				const anchorElement =
+					anchorNode?.nodeType === Node.ELEMENT_NODE
+						? (anchorNode as Element)
+						: anchorNode?.parentElement;
+				const selectionInEditable =
+					!!anchorElement && editable.contains(anchorElement);
+				const focusInEditable =
+					!!active &&
+					(active === editable || editable.contains(active));
+				const focusInTitle =
+					!!active &&
+					host.contains(active) &&
+					active.matches("input, textarea");
+
+				if (!focusInEditable && !focusInTitle && !selectionInEditable) {
+					return;
+				}
+
+				const toolbar = host.querySelector(
+					".mdxeditor-toolbar",
+				) as HTMLElement | null;
+				if (!toolbar) {
+					return;
+				}
+
+				const toolbarRect = toolbar.getBoundingClientRect();
+				if (toolbarRect.height <= 0) {
+					return;
+				}
+
+				const touch = touchEvt.touches[0];
+				if (touch.clientY >= toolbarRect.top) {
+					return;
+				}
+
+				keyboardDismissTouchStartX = touch.clientX;
+				keyboardDismissTouchStartY = touch.clientY;
+				keyboardDismissPreviousY = touch.clientY;
+				keyboardDismissStartedAboveToolbar = true;
+			};
+
 			editable.addEventListener(
 				"pointerdown",
 				onPointerDownCapture,
 				true,
 			);
 			editable.addEventListener("keydown", onKeyDownCapture, true);
+			host.addEventListener(
+				"touchstart",
+				onKeyboardDismissTouchStartCapture,
+				true,
+			);
 			editable.addEventListener("touchstart", onTouchStartCapture, {
 				capture: true,
 				passive: false,
 			});
+			host.addEventListener("touchmove", onTouchMoveCapture, true);
 			editable.addEventListener("touchend", onTouchEndCapture, true);
+			host.addEventListener("touchend", onTouchEndCapture, true);
+			host.addEventListener("touchcancel", onTouchCancelCapture, true);
 
 			// Strip tabindex from li[role="checkbox"] so iOS never focuses the
 			// li element itself. Without tabindex, tapping the text span naturally
@@ -335,14 +526,34 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 					true,
 				);
 				editable.removeEventListener("keydown", onKeyDownCapture, true);
+				host.removeEventListener(
+					"touchstart",
+					onKeyboardDismissTouchStartCapture,
+					true,
+				);
 				editable.removeEventListener(
 					"touchstart",
 					onTouchStartCapture,
 					true,
 				);
+				host.removeEventListener(
+					"touchmove",
+					onTouchMoveCapture,
+					true,
+				);
 				editable.removeEventListener(
 					"touchend",
 					onTouchEndCapture,
+					true,
+				);
+				host.removeEventListener(
+					"touchend",
+					onTouchEndCapture,
+					true,
+				);
+				host.removeEventListener(
+					"touchcancel",
+					onTouchCancelCapture,
 					true,
 				);
 				tabIndexObserver.disconnect();
