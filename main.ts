@@ -244,10 +244,14 @@ export default class RichTextPlugin extends Plugin {
 	}
 
 	async loadSettings() {
+		const savedSettings = (await this.loadData()) as
+			| Partial<RichTextPluginSettings>
+			| null;
+
 		this.settings = Object.assign(
 			{},
 			DEFAULT_SETTINGS,
-			await this.loadData(),
+			savedSettings,
 		);
 	}
 	async saveSettings() {

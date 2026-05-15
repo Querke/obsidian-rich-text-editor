@@ -15,7 +15,7 @@ export class RichTextOverlay {
 
 	constructor(public view: MarkdownView) {
 		// Create the container inside the view's content element
-		this.container = document.createElement("div");
+		this.container = activeDocument.createDiv();
 
 		if (!this.view.contentEl) {
 			console.warn(
@@ -61,17 +61,17 @@ export class RichTextOverlay {
 
 		this.scope.register(["Mod"], "i", (evt) => {
 			evt.preventDefault();
-			document.dispatchEvent(new CustomEvent("plugin:toggle-italic"));
+			activeDocument.dispatchEvent(new CustomEvent("plugin:toggle-italic"));
 		});
 
 		this.scope.register(["Mod"], "u", (evt) => {
 			evt.preventDefault();
-			document.dispatchEvent(new CustomEvent("plugin:toggle-underline"));
+			activeDocument.dispatchEvent(new CustomEvent("plugin:toggle-underline"));
 		});
 
 		this.scope.register(["Mod"], "k", (evt) => {
 			evt.preventDefault();
-			document.dispatchEvent(new CustomEvent("plugin:show-link-dialog"));
+			activeDocument.dispatchEvent(new CustomEvent("plugin:show-link-dialog"));
 		});
 
 		this.mount();
@@ -98,7 +98,7 @@ export class RichTextOverlay {
 
 		output = output.replace(
 			/\[([^\]]+)\]\((tag:([^)]+))\)/g,
-			(match, label, fullUrl, tag) => {
+			(match: string, label: string, fullUrl: string, tag: string) => {
 				// label is typically "#tag", but we don't rely on it
 				const cleanTag = String(tag).trim();
 				if (cleanTag.length === 0) {
@@ -113,7 +113,7 @@ export class RichTextOverlay {
 		// Match standard markdown links: [Label](Url)
 		output = output.replace(
 			/\[([^\]]+)\]\(([^)]+)\)/g,
-			(match, label, url) => {
+			(match: string, label: string, url: string) => {
 				// A. Ignore External Links (http/https)
 				if (url.startsWith("http://") || url.startsWith("https://")) {
 					return match;
@@ -150,7 +150,7 @@ export class RichTextOverlay {
 		// --- TAGS: #tag -> [#tag](tag:tag) ---
 		normalized = normalized.replace(
 			/(^|[\s([{>])#([A-Za-z0-9_/-]+)\b/gm,
-			(match, prefix, tag) => {
+			(match: string, prefix: string, tag: string) => {
 				const cleanTag = String(tag).trim();
 				if (cleanTag.length === 0) {
 					return match;
@@ -162,7 +162,7 @@ export class RichTextOverlay {
 		// A. Handle Aliased Wikilinks: [[Link|Alias]] -> [Alias](Link)
 		normalized = normalized.replace(
 			/\[\[([^|\]]+)\|([^\]]+)\]\]/g,
-			(match, link, alias) => {
+			(match: string, link: string, alias: string) => {
 				// Encode the link path so MDXEditor accepts spaces (e.g. "My Note" -> "My%20Note")
 				const encodedLink = encodeURI(link.trim());
 				return `[${alias}](${encodedLink})`;
@@ -170,10 +170,13 @@ export class RichTextOverlay {
 		);
 
 		// B. Handle Standard Wikilinks: [[Link]] -> [Link](Link)
-		normalized = normalized.replace(/\[\[([^|\]]+)\]\]/g, (match, link) => {
-			const encodedLink = encodeURI(link.trim());
-			return `[${link}](${encodedLink})`;
-		});
+		normalized = normalized.replace(
+			/\[\[([^|\]]+)\]\]/g,
+			(match: string, link: string) => {
+				const encodedLink = encodeURI(link.trim());
+				return `[${link}](${encodedLink})`;
+			},
+		);
 
 		// 2. MDXEditor NEEDS spaces for lists, but handles content tabs as entities
 		normalized = normalized.replace(/([^\n\t])\t/g, "$1&#x9;");
@@ -340,7 +343,11 @@ export class RichTextOverlay {
 
 	updateReadableLineLength() {
 		// @ts-ignore - access internal Obsidian config via this.view.app
-		const isReadable = this.view.app.vault.getConfig("readableLineLength");
+		const vaultConfig = this.view.app.vault as typeof this.view.app.vault & {
+			getConfig?: (key: string) => unknown;
+		};
+		const isReadable =
+			vaultConfig.getConfig?.("readableLineLength") === true;
 
 		// Apply class to OUR container, not the parent contentEl
 		this.container.toggleClass("is-readable-line-width", isReadable);
