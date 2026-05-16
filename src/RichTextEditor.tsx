@@ -106,7 +106,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 						".custom-titlebar",
 					);
 					if (!bar) {
-						bar = activeDocument.createDiv();
+						bar = createDiv();
 						bar.className = "custom-titlebar";
 						// Inject at the start of the first child element
 						targetChild.prepend(bar);
