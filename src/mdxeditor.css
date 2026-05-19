@@ -564,6 +564,18 @@ mark {
 	font-size: var(--text-sm);
 }
 
+.is-mobile ._toolbarNodeKindSelectContainer_1e2ox_285,
+.is-mobile ._toolbarButtonDropdownContainer_1e2ox_286,
+.is-mobile ._toolbarCodeBlockLanguageSelectContent_1e2ox_287,
+.is-mobile ._selectContainer_1e2ox_288 {
+	filter: drop-shadow(0 2px 2px rgb(0 0 0 / 0.2));
+	z-index: 3;
+	width: 100dvw;
+	border-radius: 6px;
+	background-color: var(--basePageBg);
+	font-size: var(--text-base);
+}
+
 ._toolbarButtonDropdownContainer_1e2ox_286 {
 	border-top-right-radius: 6px;
 }
@@ -624,14 +636,18 @@ mark {
 
 ._toolbarNodeKindSelectItem_1e2ox_348[data-highlighted],
 ._selectItem_1e2ox_301[data-highlighted] {
-	background-color: var(--baseBg);
+	background-color: var(--background-modifier-hover);
+	color: var(--text-normal);
 	outline: none;
 }
 
 ._toolbarNodeKindSelectItem_1e2ox_348[data-state="checked"],
 ._selectItem_1e2ox_301[data-state="checked"] {
-	color: var(--baseTextContrast);
-	background-color: var(--baseBg);
+	color: var(--text-normal);
+	background-color: var(
+		--background-modifier-active,
+		var(--background-modifier-hover)
+	);
 }
 
 ._toolbarNodeKindSelectItem_1e2ox_348:last-child,

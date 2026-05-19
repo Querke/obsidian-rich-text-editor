@@ -79,7 +79,7 @@ export default class RichTextPlugin extends Plugin {
 			}),
 		);
 
-			// Trigger visibility check whenever the layout changes (e.g., switching to Reading Mode)
+		// Trigger visibility check whenever the layout changes (e.g., switching to Reading Mode)
 		this.registerEvent(
 			this.app.workspace.on("layout-change", () => {
 				this.app.workspace.iterateAllLeaves((leaf) => {
@@ -131,7 +131,10 @@ export default class RichTextPlugin extends Plugin {
 	}
 
 	addSwitchButton(leaf: WorkspaceLeaf) {
-		if (leaf.view.getViewType() === "markdown" && leaf.view instanceof ItemView) {
+		if (
+			leaf.view.getViewType() === "markdown" &&
+			leaf.view instanceof ItemView
+		) {
 			// Check a custom flag to prevent duplicate buttons
 			if ((leaf.view as RichTextView).__hasRichTextSwitch) return;
 
@@ -244,15 +247,10 @@ export default class RichTextPlugin extends Plugin {
 	}
 
 	async loadSettings() {
-		const savedSettings = (await this.loadData()) as
-			| Partial<RichTextPluginSettings>
-			| null;
+		const savedSettings =
+			(await this.loadData()) as Partial<RichTextPluginSettings> | null;
 
-		this.settings = Object.assign(
-			{},
-			DEFAULT_SETTINGS,
-			savedSettings,
-		);
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, savedSettings);
 	}
 	async saveSettings() {
 		await this.saveData(this.settings);

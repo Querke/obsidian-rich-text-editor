@@ -8,7 +8,7 @@
 	/* height: calc(100% - 128px) !important; */
 }
 
-.rich-text-overlay .custom-titlebar {
+.custom-titlebar {
 	/* Use padding so we don't push the container off-screen */
 	padding-top: 8px;
 	padding-bottom: 13px;
