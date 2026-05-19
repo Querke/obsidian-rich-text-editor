@@ -541,10 +541,6 @@ mark {
 	min-width: var(--spacing-6);
 }
 
-._toolbarRoot_1e2ox_162 ._toolbarButton_1e2ox_239 + ._toolbarButton_1e2ox_239 {
-	margin-left: var(--spacing-1);
-}
-
 ._toolbarRoot_1e2ox_162 ._activeToolbarButton_1e2ox_275 {
 	color: var(--interactive-accent);
 }
