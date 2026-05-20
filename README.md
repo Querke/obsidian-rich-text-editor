@@ -2,10 +2,9 @@
 A seamless, rich-text writing experience for Obsidian. Built for users who want the power of Markdown without the visual clutter of raw syntax.
 The plugin is using a customized version of MDXEditor.
 
-<img width="2772" height="1475" alt="image" src="https://github.com/user-attachments/assets/1b10e436-29a6-4546-8a37-502483773fb6" />
+<img width="720" style="height: auto;" alt="image" src="https://github.com/user-attachments/assets/1b10e436-29a6-4546-8a37-502483773fb6" />
 
-<img width="1024" height="720" alt="New Project" src="https://github.com/user-attachments/assets/d59c63d9-9696-4116-8693-9b83806ac7fa" />
-
+<img width="720" style="height: auto;" alt="New Project" src="https://github.com/user-attachments/assets/d59c63d9-9696-4116-8693-9b83806ac7fa" />
 
 
 
