@@ -4,7 +4,9 @@ The plugin is using a customized version of MDXEditor.
 
 <img width="2772" height="1475" alt="image" src="https://github.com/user-attachments/assets/1b10e436-29a6-4546-8a37-502483773fb6" />
 
-<img width="192" height="112" alt="image" src="https://github.com/user-attachments/assets/cb4fa372-7dec-4ad9-955e-d552662bdb05" />
+<img width="1024" height="720" alt="New Project" src="https://github.com/user-attachments/assets/d59c63d9-9696-4116-8693-9b83806ac7fa" />
+
+
 
 
 ## Why this exists?
@@ -18,7 +20,7 @@ Luckily changing between the editor is just one click away!
 * **Code-Free Editing:** No more looking at code when writing text. Edit them visually, just like a modern word processor.
 * **Obsidian Integration:** Integrated seamlessly with Obsidian's native UI and workflows.
 * **Obsidian look and feel:** I tried to replicate the look of obsidian as much as I can, so the workflow is as familiar as possible.
-* **Mobile support:** With toolbar just over your keyboard, just what you are used to.
+* **Mobile support:** With toolbar just over your keyboard, just what you are used to. Swipe down gesture to dismiss the keyboard.
 ## How to Use
 <img width="332" height="133" alt="image" src="https://github.com/user-attachments/assets/2cad521b-742c-4cda-8ce7-6104de5316f9" />
 
