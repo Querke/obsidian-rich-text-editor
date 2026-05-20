@@ -1,5 +1,5 @@
 # Obsidian Rich Text Editor
-A seamless, rich-text writing experience for Obsidian. Built for users who want the power of Markdown without the visual clutter of raw syntax.
+A seamless, rich-text writing experience for Obsidian. Built for users who want the power of Markdown without the visual clutter of raw syntax. Text produced is pure markdown.
 The plugin is using a customized version of MDXEditor.
 
 <img width="720" style="height: auto;" alt="image" src="https://github.com/user-attachments/assets/1b10e436-29a6-4546-8a37-502483773fb6" />
