@@ -820,7 +820,15 @@ export function InsertCallout() {
 	const editor = useCellValue(rootEditor$);
 	const items = CALLOUT_TYPES.map((type) => ({
 		value: type,
-		label: defaultTitle(type),
+		label: (
+			<span className="callout-menu-item">
+				<LucideIcon
+					className="callout-menu-icon"
+					name={iconFor(type)}
+				/>
+				{defaultTitle(type)}
+			</span>
+		),
 	}));
 
 	return (

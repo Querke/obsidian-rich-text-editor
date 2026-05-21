@@ -1979,6 +1979,23 @@ form._multiFieldForm_1e2ox_1214 ._formField_1e2ox_1220 label {
 	display: contents;
 }
 
+/* Per-type icon shown beside each entry in the callout dropdown. */
+.callout-menu-item {
+	display: flex;
+	align-items: center;
+	gap: var(--spacing-2, 6px);
+}
+
+.callout-menu-icon {
+	display: flex;
+	flex: 0 0 auto;
+}
+
+.callout-menu-icon svg {
+	width: 16px;
+	height: 16px;
+}
+
 ._inputSizer_1e2ox_1245 {
 	display: inline-grid;
 	vertical-align: baseline;
