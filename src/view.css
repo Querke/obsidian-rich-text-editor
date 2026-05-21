@@ -196,7 +196,7 @@ blockquote {
 	font-size: var(--tag-size);
 	padding-inline-start: var(--tag-padding-x);
 	padding-inline-end: var(--tag-padding-x);
-	text-decoration-line: none;
+	text-decoration: none;
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;

@@ -1067,7 +1067,7 @@ mark {
 	display: flex;
 	align-items: center;
 	color: var(--accentText);
-	text-decoration-line: none;
+	text-decoration: none;
 
 	border: 1px solid transparent;
 }
@@ -2142,15 +2142,15 @@ form._multiFieldForm_1e2ox_1214 ._formField_1e2ox_1220 label {
 }
 
 ._underline_1tncs_18 {
-	text-decoration-line: underline;
+	text-decoration: underline;
 }
 
 ._strikethrough_1tncs_34 {
-	text-decoration-line: line-through;
+	text-decoration: line-through;
 }
 
 ._underlineStrikethrough_1tncs_38 {
-	text-decoration-line: underline line-through;
+	text-decoration: underline line-through;
 }
 
 ._subscript_1tncs_42 {
@@ -2197,7 +2197,7 @@ form._multiFieldForm_1e2ox_1214 ._formField_1e2ox_1220 label {
 }
 
 ._listItemChecked_1tncs_73 {
-	text-decoration-line: line-through;
+	text-decoration: line-through;
 }
 
 ._listItemUnchecked_1tncs_74:before,
