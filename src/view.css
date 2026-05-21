@@ -121,7 +121,7 @@
 
 .rich-text-overlay.is-readable-line-width .mdxeditor-toolbar {
 	/* justify-content: center; */
-	max-width: 858px;
+	max-width: 904px;
 	margin: 0 auto;
 	width: 100%;
 }
@@ -206,4 +206,65 @@ blockquote {
 
 .mxeditor-content-editable a[href^="tag:"]:hover {
 	filter: brightness(1.15);
+}
+
+/* ---------------------------------------------------------------------------- */
+/* Read-only Properties Display                                                  */
+/* ---------------------------------------------------------------------------- */
+
+.custom-properties .metadata-container {
+	padding-bottom: 8px;
+}
+
+.custom-properties .metadata-properties-heading {
+	cursor: var(--cursor);
+}
+
+.custom-properties .collapse-indicator.is-collapsed svg {
+	transform: rotate(-90deg);
+}
+
+.custom-properties .metadata-property-key {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+
+.custom-properties .metadata-property-key-input {
+	cursor: default;
+	user-select: text;
+}
+
+.custom-properties .metadata-input-longtext {
+	cursor: default;
+	padding: 0;
+}
+
+.custom-properties .metadata-value-empty {
+	color: var(--text-faint);
+}
+
+.custom-properties .multi-select-container {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	padding: 0;
+}
+
+.custom-properties .multi-select-pill {
+	cursor: default;
+	margin-inline-start: 0;
+}
+
+.custom-properties .multi-select-pill-content {
+	margin-inline-end: var(--pill-padding-x);
+}
+
+.custom-properties .metadata-input.metadata-input-text {
+	display: flex;
+	align-items: center;
+}
+
+.custom-properties .metadata-input-checkbox {
+	pointer-events: none;
 }

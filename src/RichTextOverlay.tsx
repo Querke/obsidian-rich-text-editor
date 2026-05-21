@@ -2,6 +2,11 @@ import { EventRef, MarkdownView, Notice, Scope, TFile } from "obsidian";
 import { StrictMode } from "react";
 import { createRoot, Root } from "react-dom/client";
 import { RichTextEditor, RichTextEditorRef } from "./RichTextEditor";
+import {
+	mdxCalloutsToObsidian,
+	obsidianCalloutsToMdx,
+} from "./calloutPlugin";
+import { PropertyInfo } from "./PropertiesDisplay";
 
 export class RichTextOverlay {
 	private root: Root | null = null;
@@ -12,6 +17,7 @@ export class RichTextOverlay {
 
 	private renameRef: EventRef;
 	private editorRef: RichTextEditorRef | null = null;
+	private rawFrontmatter = "";
 
 	constructor(public view: MarkdownView) {
 		// Create the container inside the view's content element
@@ -90,6 +96,10 @@ export class RichTextOverlay {
 			.replace(/&#x20;/g, " ")
 			.replace(/&#x9;/g, "\t")
 			.replace(/\r\n/g, "\n");
+
+		// Callouts: convert `:::callout` directives back to `> [!type]` syntax
+		// before the newline-collapsing below touches the block structure.
+		output = mdxCalloutsToObsidian(output);
 
 		// 2. Reduce excessive newlines (Halve them: \n\n -> \n)
 		output = output.replace(/\n{2,}/g, (m) =>
@@ -178,6 +188,10 @@ export class RichTextOverlay {
 			},
 		);
 
+		// Callouts: convert Obsidian `> [!type]` blockquotes into `:::callout`
+		// directives. Done after links/tags so callout content is converted too.
+		normalized = obsidianCalloutsToMdx(normalized);
+
 		// 2. MDXEditor NEEDS spaces for lists, but handles content tabs as entities
 		normalized = normalized.replace(/([^\n\t])\t/g, "$1&#x9;");
 
@@ -188,8 +202,58 @@ export class RichTextOverlay {
 		// NEW: Check if line is a table row
 		const isTable = (line: string) => line.trim().startsWith("|");
 
+		// Tracks how deeply nested we are inside `:::callout` directive fences.
+		// While inside one, every line is kept verbatim and joined with a
+		// single newline so the directive block survives paragraph splitting.
+		let directiveDepth = 0;
+
+		// Holds the opening fence marker (``` or ~~~) while inside a fenced
+		// code block. Every line of such a block is kept verbatim so multi-line
+		// code — e.g. an Obsidian `tasks` query — is not exploded into
+		// blank-line-separated paragraphs.
+		let codeFence: string | null = null;
+
 		for (let i = 0; i < lines.length; i++) {
 			let line = lines[i];
+
+			const isDirectiveOpen = /^(:{3,})callout\b/.test(line);
+			const isDirectiveClose = /^:{3,}\s*$/.test(line);
+
+			if (isDirectiveOpen || directiveDepth > 0) {
+				if (isDirectiveOpen && directiveDepth === 0) {
+					paragraphs.push(line);
+				} else {
+					paragraphs[paragraphs.length - 1] += "\n" + line;
+				}
+				if (isDirectiveOpen) {
+					directiveDepth++;
+				} else if (isDirectiveClose) {
+					directiveDepth--;
+				}
+				continue;
+			}
+
+			// Fenced code blocks: keep every line verbatim (joined with a
+			// single newline) so multi-line code — Tasks queries, JS, etc. —
+			// stays a single block instead of being split into paragraphs.
+			if (codeFence !== null) {
+				paragraphs[paragraphs.length - 1] += "\n" + line;
+				const close = line.match(/^\s*(`{3,}|~{3,})\s*$/);
+				if (
+					close &&
+					close[1][0] === codeFence[0] &&
+					close[1].length >= codeFence.length
+				) {
+					codeFence = null;
+				}
+				continue;
+			}
+			const fenceOpen = line.match(/^\s*(`{3,}|~{3,})/);
+			if (fenceOpen) {
+				codeFence = fenceOpen[1];
+				paragraphs.push(line);
+				continue;
+			}
 
 			// B. Convert Structural Indentation
 			const leadingWhitespace = line.match(/^\s*/)?.[0] || "";
@@ -232,13 +296,54 @@ export class RichTextOverlay {
 		return paragraphs.join("\n\n");
 	};
 
+	private extractFrontmatter(text: string): { raw: string; body: string } {
+		const match = text.match(/^(---\r?\n[\s\S]*?\r?\n---\r?\n?)/);
+		if (match) return { raw: match[1], body: text.slice(match[1].length) };
+		return { raw: "", body: text };
+	}
+
+	private getProperties(): PropertyInfo[] {
+		const file = this.view.file;
+		if (!file) return [];
+
+		const cache = this.view.app.metadataCache.getFileCache(file);
+		const frontmatter = cache?.frontmatter;
+		if (!frontmatter) return [];
+
+		// @ts-ignore — metadataTypeManager is internal
+		const typeManager = (this.view.app as any).metadataTypeManager;
+
+		const resolveType = (key: string): string => {
+			if (!typeManager) return "text";
+			const p = typeManager.properties;
+			if (p && typeof p === "object") {
+				const entry = p instanceof Map ? p.get(key) : p[key];
+				if (typeof entry === "string") return entry;
+				if (entry?.widget) return entry.widget;
+				if (entry?.type) return entry.type;
+			}
+			return "text";
+		};
+
+		return Object.entries(frontmatter)
+			.filter(([key]) => key !== "position")
+			.map(([key, value]) => ({
+				key,
+				value,
+				type: resolveType(key),
+			}));
+	}
+
 	update() {
 		if (this.editorRef) {
 			try {
-				const newText = this.view.editor.getValue();
-				const cleanText = this.obsidianToMdx(newText);
+				const rawText = this.view.editor.getValue();
+				const { raw, body } = this.extractFrontmatter(rawText);
+				this.rawFrontmatter = raw;
+				const cleanText = this.obsidianToMdx(body);
 				this.editorRef.setMarkdown(cleanText);
 				this.editorRef.setTitle(this.view.file?.basename || "Untitled");
+				this.editorRef.setProperties(this.getProperties());
 			} catch (e) {
 				console.error(
 					"RichTextOverlay: Failed to update editor content",
@@ -255,13 +360,17 @@ export class RichTextOverlay {
 
 		let initialText = "";
 		try {
-			initialText = this.obsidianToMdx(this.view.editor.getValue());
+			const rawText = this.view.editor.getValue();
+			const { raw, body } = this.extractFrontmatter(rawText);
+			this.rawFrontmatter = raw;
+			initialText = this.obsidianToMdx(body);
 		} catch (e) {
 			console.error("RichTextOverlay: Conversion failed", e);
 			return;
 		}
 
 		const file = this.view.file;
+		const initialProperties = this.getProperties();
 
 		const handleRename = async (nextBaseName: string): Promise<boolean> => {
 			if (!file) return false;
@@ -288,10 +397,13 @@ export class RichTextOverlay {
 						}}
 						title={file?.basename || "Untitled"}
 						text={initialText}
+						properties={initialProperties}
 						onSave={(newText) => {
 							try {
 								const cleanText = this.mdxToObsidian(newText);
-								this.view.editor.setValue(cleanText);
+								this.view.editor.setValue(
+									this.rawFrontmatter + cleanText,
+								);
 								this.view.requestSave();
 							} catch (e) {
 								console.error(

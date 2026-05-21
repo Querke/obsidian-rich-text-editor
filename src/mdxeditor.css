@@ -105,6 +105,8 @@ li[role="checkbox"]:focus-within {
 
 .mdxeditor .cm-editor .cm-content {
 	font-family: var(--font-monospace);
+	padding-top: 20px;
+	padding-bottom: 20px;
 }
 
 .mdxeditor-popup-container {
@@ -676,7 +678,6 @@ mark {
 }
 
 ._codeMirrorWrapper_1e2ox_392 {
-	margin-bottom: var(--spacing-5);
 	border: 1px solid var(--baseLine);
 	border-radius: var(--radius-medium);
 	overflow: hidden;
@@ -715,6 +716,25 @@ mark {
 
 	/* "Remove" the fixed height constraint */
 	height: auto;
+}
+
+/* Non-interactive language flair, shown in the corner of every code block
+   (mirrors Obsidian's `code-block-flair`). The `data-code-lang` attribute is
+   set in RichTextEditor.tsx from the block's selected language. */
+[class*="_codeMirrorWrapper_"][data-code-lang]::before {
+	content: attr(data-code-lang);
+	position: absolute;
+	top: 0;
+	right: 0;
+	padding: 2px 8px;
+	font-family: var(--font-mono);
+	font-size: var(--text-xs);
+	line-height: 1.6;
+	color: var(--text-faint);
+	text-transform: lowercase;
+	pointer-events: none;
+	user-select: none;
+	z-index: 1;
 }
 
 ._frontmatterWrapper_1e2ox_413 {
@@ -1550,7 +1570,7 @@ mark {
 
 ._nestedEditor_1e2ox_961 {
 	background: var(--basePageBg);
-	padding: var(--spacing-1) var(--spacing-2);
+	padding: var(--spacing-2) 0;
 	border-radius: var(--radius-medium);
 }
 
@@ -1841,6 +1861,122 @@ form._multiFieldForm_1e2ox_1214 ._formField_1e2ox_1220 label {
 ._popupContainer_1e2ox_1240 {
 	position: relative;
 	z-index: 200;
+}
+
+/* --------------------------------------------------------------------------
+ * Obsidian callouts (rendered by calloutPlugin.tsx)
+ *
+ * A callout is a native Lexical block node. Its first child is the title bar
+ * (a decorator node, hosted in `.callout-title-host`); the remaining children
+ * are the editable body. The `.callout` colour/tint comes from Obsidian's CSS.
+ * ------------------------------------------------------------------------ */
+
+.rich-text-overlay .callout {
+	margin-block: 1em;
+	position: relative;
+	padding: var(--callout-padding, 12px);
+}
+
+/* The decorator host is layout-transparent so the title bar inside it
+ * behaves as a direct child of .callout. */
+.rich-text-overlay .callout-title-host {
+	display: contents;
+}
+
+/* Body content — every child of .callout except the title bar. */
+.rich-text-overlay .callout > :not(.callout-title-host) {
+	margin-block: 0.5em;
+}
+
+.rich-text-overlay .callout > :not(.callout-title-host):last-child {
+	margin-bottom: 0;
+}
+
+/* Title bar. */
+.rich-text-overlay .callout-title {
+	display: flex;
+	align-items: center;
+	gap: var(--size-4-1, 4px);
+	margin-bottom: 0.5em;
+}
+
+/* Editable callout title. Keeps the native .callout-title-inner styling
+ * (bold, colour) but drops the default input chrome. */
+.rich-text-overlay .callout-title-input {
+	flex: 1;
+	min-width: 0;
+	padding: 0;
+	border: none;
+	outline: none;
+	background: transparent;
+	font: inherit;
+	color: inherit;
+	user-select: text;
+}
+
+/* Remove ("trash") button — hidden until the callout is hovered or focused,
+ * mirroring the image delete affordance (hover on desktop, focus on mobile). */
+.rich-text-overlay .callout-remove {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: var(--spacing-1);
+	border: none;
+	border-radius: var(--radius-small);
+	background: transparent;
+	color: var(--text-muted);
+	cursor: pointer;
+	opacity: 0;
+	transition: opacity 100ms ease-in-out;
+}
+
+.rich-text-overlay
+	.callout:hover
+	> .callout-title-host
+	> .callout-title
+	> .callout-remove,
+.rich-text-overlay
+	.callout:focus-within
+	> .callout-title-host
+	> .callout-title
+	> .callout-remove {
+	opacity: 1;
+}
+
+.rich-text-overlay .callout-remove:hover {
+	color: var(--text-error);
+	background: var(--background-modifier-hover);
+}
+
+.rich-text-overlay .callout-remove svg {
+	width: 16px;
+	height: 16px;
+}
+
+/* Foldable callouts: collapsing hides every body child. */
+.rich-text-overlay .callout-fold {
+	display: flex;
+	align-items: center;
+	cursor: pointer;
+	transition: transform 100ms ease-in-out;
+}
+
+.rich-text-overlay .callout.is-collapsed .callout-fold {
+	transform: rotate(-90deg);
+}
+
+.rich-text-overlay .callout.is-collapsed > :not(.callout-title-host) {
+	display: none;
+}
+
+.rich-text-overlay .callout.is-collapsed .callout-title {
+	margin-bottom: 0;
+}
+
+/* Toolbar "Insert callout" button icon. `display: contents` lets the inner
+ * svg be sized by MDXEditor's toolbar-button rules as if it were direct. */
+.callout-toolbar-icon {
+	display: contents;
 }
 
 ._inputSizer_1e2ox_1245 {

@@ -7,6 +7,7 @@ import {
 	codeMirrorPlugin,
 	CodeToggle,
 	CreateLink,
+	directivesPlugin,
 	headingsPlugin,
 	HighlightToggle,
 	imagePlugin,
@@ -42,10 +43,45 @@ import type { LexicalEditor } from "lexical";
 import { $isListItemNode } from "@lexical/list";
 import { IndentControls } from "./IndentControls";
 import { tagLinkPlugin } from "./tagLinkPlugin";
+import { calloutPlugin, InsertCallout } from "./calloutPlugin";
+import { PropertiesDisplay, PropertyInfo } from "./PropertiesDisplay";
+
+// Languages offered in the code-block language dropdown. Keyed by the fenced
+// code-block id; the value is the human-readable label shown in the dropdown.
+const CODE_BLOCK_LANGUAGES: Record<string, string> = {
+	jsx: "JavaScript (react)",
+	js: "JavaScript",
+	css: "CSS",
+	tsx: "TypeScript (react)",
+	ts: "TypeScript",
+	md: "Markdown",
+	tasks: "Tasks (Obsidian)",
+	html: "HTML",
+	cs: "C#",
+	c: "C",
+	cpp: "C++",
+	java: "Java",
+	py: "Python",
+	go: "Go",
+	rust: "Rust",
+	kotlin: "Kotlin",
+	dart: "Dart",
+	ruby: "Ruby",
+	php: "PHP",
+	sql: "SQL",
+	svelte: "Svelte",
+	lua: "Lua",
+};
+
+// Reverse lookup (display label -> code-block id) used to render the flair.
+const CODE_BLOCK_LABEL_TO_ID = new Map(
+	Object.entries(CODE_BLOCK_LANGUAGES).map(([id, label]) => [label, id]),
+);
 
 interface Props {
 	title: string;
 	text: string;
+	properties: PropertyInfo[];
 	onSave: (newText: string) => void;
 	onRename: (nextTitle: string) => Promise<boolean>;
 	onImageUpload: (image: File) => Promise<string>;
@@ -56,6 +92,7 @@ interface Props {
 export interface RichTextEditorRef {
 	setTitle: (title: string) => void;
 	setMarkdown: (markdown: string) => void;
+	setProperties: (properties: PropertyInfo[]) => void;
 }
 
 type LexicalContentEditable = HTMLElement & {
@@ -68,20 +105,26 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 		const hostRef = useRef<HTMLDivElement | null>(null);
 
 		const [internalTitle, setInternalTitle] = useState(props.title);
+		const [properties, setProperties] = useState<PropertyInfo[]>(
+			props.properties,
+		);
 
+		const [propertiesContainer, setPropertiesContainer] =
+			useState<HTMLElement | null>(null);
 		const [titleBarContainer, setTitleBarContainer] =
 			useState<HTMLElement | null>(null);
 
 		const isDark = activeDocument.body.classList.contains("theme-dark");
 
 		useImperativeHandle(ref, () => ({
-			// Logic A: Update Title Bar state
 			setTitle: (newTitle: string) => {
 				setInternalTitle(newTitle);
 			},
-			// Logic B: Proxy the setMarkdown call to the library
 			setMarkdown: (markdown: string) => {
 				editorRef.current?.setMarkdown(markdown);
+			},
+			setProperties: (props: PropertyInfo[]) => {
+				setProperties(props);
 			},
 		}));
 
@@ -90,9 +133,8 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 
 			// Wait for MDXEditor to render
 			window.setTimeout(() => {
-				const root = hostRef.current?.querySelector<HTMLElement>(
-					".mdxeditor",
-				);
+				const root =
+					hostRef.current?.querySelector<HTMLElement>(".mdxeditor");
 
 				// Get the container
 				const contentEditor = root?.querySelector(
@@ -102,18 +144,23 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 				const targetChild = contentEditor?.firstElementChild;
 
 				if (root && targetChild) {
-					let bar = root.querySelector<HTMLElement>(
-						".custom-titlebar",
-					);
+					let bar =
+						root.querySelector<HTMLElement>(".custom-titlebar");
 					if (!bar) {
 						bar = createDiv();
 						bar.className = "custom-titlebar";
-						// Inject at the start of the first child element
 						targetChild.prepend(bar);
 					}
-
-					// Save this DOM element to state
 					setTitleBarContainer(bar);
+
+					let propsBar =
+						root.querySelector<HTMLElement>(".custom-properties");
+					if (!propsBar) {
+						propsBar = createDiv();
+						propsBar.className = "custom-properties";
+						bar.after(propsBar);
+					}
+					setPropertiesContainer(propsBar);
 				}
 			}, 0);
 		}, []);
@@ -241,7 +288,8 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 					return;
 				}
 
-				const active = activeDocument.activeElement as HTMLElement | null;
+				const active =
+					activeDocument.activeElement as HTMLElement | null;
 				const selection = window.getSelection();
 				const anchorNode = selection?.anchorNode;
 				const anchorElement =
@@ -267,9 +315,8 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 					return;
 				}
 
-				const toolbar = host.querySelector<HTMLElement>(
-					".mdxeditor-toolbar",
-				);
+				const toolbar =
+					host.querySelector<HTMLElement>(".mdxeditor-toolbar");
 				if (!toolbar) {
 					return;
 				}
@@ -289,8 +336,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 					touch.clientY >= toolbarRect.top;
 				const draggedIntoToolbar =
 					touch.clientY >=
-					toolbarRect.top +
-						Math.min(toolbarRect.height * 0.35, 24);
+					toolbarRect.top + Math.min(toolbarRect.height * 0.35, 24);
 
 				// Web touch events cannot start on the native keyboard itself, so
 				// use the toolbar directly above it as the keyboard-edge proxy.
@@ -420,7 +466,8 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 					return;
 				}
 
-				const active = activeDocument.activeElement as HTMLElement | null;
+				const active =
+					activeDocument.activeElement as HTMLElement | null;
 				const selection = window.getSelection();
 				const anchorNode = selection?.anchorNode;
 				const anchorElement =
@@ -441,9 +488,8 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 					return;
 				}
 
-				const toolbar = host.querySelector<HTMLElement>(
-					".mdxeditor-toolbar",
-				);
+				const toolbar =
+					host.querySelector<HTMLElement>(".mdxeditor-toolbar");
 				if (!toolbar) {
 					return;
 				}
@@ -536,27 +582,71 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 					onTouchStartCapture,
 					true,
 				);
-				host.removeEventListener(
-					"touchmove",
-					onTouchMoveCapture,
-					true,
-				);
+				host.removeEventListener("touchmove", onTouchMoveCapture, true);
 				editable.removeEventListener(
 					"touchend",
 					onTouchEndCapture,
 					true,
 				);
-				host.removeEventListener(
-					"touchend",
-					onTouchEndCapture,
-					true,
-				);
+				host.removeEventListener("touchend", onTouchEndCapture, true);
 				host.removeEventListener(
 					"touchcancel",
 					onTouchCancelCapture,
 					true,
 				);
 				tabIndexObserver.disconnect();
+			};
+		}, []);
+
+		// Mirror each code block's language onto a `data-code-lang` attribute of
+		// its wrapper, so CSS can render a small, non-interactive language flair
+		// (like Obsidian's). MDXEditor's own language control lives in a toolbar
+		// that is hidden until the block is focused.
+		useEffect(() => {
+			const host = hostRef.current;
+			if (!host) {
+				return;
+			}
+
+			let frame = 0;
+			const sync = () => {
+				frame = 0;
+				host.querySelectorAll<HTMLElement>(
+					'[class*="_codeMirrorWrapper_"]',
+				).forEach((wrapper) => {
+					const trigger = wrapper.querySelector(
+						'button[aria-label="Language"]',
+					);
+					const label = trigger?.textContent?.trim() ?? "";
+					const id =
+						CODE_BLOCK_LABEL_TO_ID.get(label) ?? label.toLowerCase();
+					if (id) {
+						wrapper.setAttribute("data-code-lang", id);
+					} else {
+						wrapper.removeAttribute("data-code-lang");
+					}
+				});
+			};
+
+			const scheduleSync = () => {
+				if (frame === 0) {
+					frame = window.requestAnimationFrame(sync);
+				}
+			};
+
+			sync();
+			const observer = new MutationObserver(scheduleSync);
+			observer.observe(host, {
+				childList: true,
+				subtree: true,
+				characterData: true,
+			});
+
+			return () => {
+				observer.disconnect();
+				if (frame !== 0) {
+					window.cancelAnimationFrame(frame);
+				}
 			};
 		}, []);
 
@@ -644,7 +734,8 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 										".mxeditor-content-editable",
 									);
 									if (root) {
-										const range = activeDocument.createRange();
+										const range =
+											activeDocument.createRange();
 										range.selectNodeContents(root);
 										range.collapse(true);
 
@@ -698,12 +789,17 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 									<CreateLink />
 									<InsertImage />
 									<InsertTable />
+									<InsertCallout />
 								</>
 							),
 						}),
 						headingsPlugin(),
 						listsPlugin(),
 						quotePlugin(),
+						// directivesPlugin supplies the directive Markdown
+						// grammar; calloutPlugin supplies the callout node.
+						directivesPlugin({ directiveDescriptors: [] }),
+						calloutPlugin(),
 						thematicBreakPlugin(),
 						markdownShortcutPlugin(),
 						tablePlugin(),
@@ -730,34 +826,17 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 						linkDialogPlugin(),
 						codeBlockPlugin({ defaultCodeBlockLanguage: "js" }),
 						codeMirrorPlugin({
-							codeBlockLanguages: {
-								jsx: "JavaScript (react)",
-								js: "JavaScript",
-								css: "CSS",
-								tsx: "TypeScript (react)",
-								ts: "TypeScript",
-								md: "Markdown",
-								html: "HTML",
-								cs: "C#",
-								c: "C",
-								cpp: "C++",
-								java: "Java",
-								py: "Python",
-								go: "Go",
-								rust: "Rust",
-								kotlin: "Kotlin",
-								dart: "Dart",
-								ruby: "Ruby",
-								php: "PHP",
-								sql: "SQL",
-								svelte: "Svelte",
-								lua: "Lua",
-							},
+							codeBlockLanguages: CODE_BLOCK_LANGUAGES,
 
 							codeMirrorExtensions: isDark ? [oneDark] : [],
 						}),
 					]}
 				/>
+				{propertiesContainer &&
+					createPortal(
+						<PropertiesDisplay properties={properties} />,
+						propertiesContainer,
+					)}
 				{titleBarContainer &&
 					createPortal(<TitleBar />, titleBarContainer)}
 			</div>
