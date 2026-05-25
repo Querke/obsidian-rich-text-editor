@@ -267,3 +267,10 @@ blockquote {
 .custom-properties .metadata-input-checkbox {
 	pointer-events: none;
 }
+
+/* Wikilink picker — give the search input some breathing room on the left
+   so the placeholder doesn't hug the modal edge. */
+.rich-text-wikilink-picker .prompt-input {
+	padding-left: 12px;
+}
+

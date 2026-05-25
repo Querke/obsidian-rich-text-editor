@@ -432,7 +432,7 @@ function cssEscape(value: string): string {
 // keep in sync as a sibling host inside the def's DOM. The host is created
 // once per def via a root-level subscription so it survives Lexical updates.
 
-function LucideIcon(props: { name: string; className?: string }) {
+export function LucideIcon(props: { name: string; className?: string }) {
 	const ref = useRef<HTMLSpanElement>(null);
 	useEffect(() => {
 		const el = ref.current;

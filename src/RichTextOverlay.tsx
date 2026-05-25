@@ -1,4 +1,11 @@
-import { EventRef, MarkdownView, Notice, Scope, TFile } from "obsidian";
+import {
+	EventRef,
+	FuzzySuggestModal,
+	MarkdownView,
+	Notice,
+	Scope,
+	TFile,
+} from "obsidian";
 import { StrictMode } from "react";
 import { createRoot, Root } from "react-dom/client";
 import { RichTextEditor, RichTextEditorRef } from "./RichTextEditor";
@@ -167,6 +174,24 @@ export class RichTextOverlay {
 					return match;
 				}
 				return `${prefix}[#${cleanTag}](tag:${cleanTag})`;
+			},
+		);
+
+		// Handle embeds ![[name]] / ![[name|alias]]. Images and other media
+		// stay as image markdown (MDXEditor renders them). Note embeds are
+		// downgraded to a regular link — otherwise MDXEditor treats the
+		// encoded basename as an image src and tries (and fails) to load it.
+		const MEDIA_EXT = /\.(png|jpe?g|gif|webp|svg|bmp|avif|heic|mp4|mov|webm|mp3|wav|ogg|m4a|flac|pdf)$/i;
+		normalized = normalized.replace(
+			/!\[\[([^|\]]+)(?:\|([^\]]+))?\]\]/g,
+			(_match: string, link: string, alias: string | undefined) => {
+				const trimmed = link.trim();
+				const label = alias?.trim() || trimmed;
+				const encoded = encodeURI(trimmed);
+				if (MEDIA_EXT.test(trimmed)) {
+					return `![${label}](${encoded})`;
+				}
+				return `[${label}](${encoded})`;
 			},
 		);
 
@@ -446,6 +471,7 @@ export class RichTextOverlay {
 						onRename={handleRename}
 						onImageUpload={(file) => this.handleImageUpload(file)}
 						onResolveImage={this.resolveImagePath}
+						onPickInternalLink={this.pickInternalLink}
 						onNavigate={(path) => {
 							// Use the void operator to handle the promise returned by openLinkText
 							void this.view.app.workspace.openLinkText(
@@ -540,6 +566,54 @@ export class RichTextOverlay {
 		// 6. Decode URI component in case generateMarkdownLink encoded spaces
 		return decodeURI(cleanPath);
 	}
+
+	private pickInternalLink = (): Promise<string | null> => {
+		const app = this.view.app;
+		const currentPath = this.view.file?.path || "";
+		return new Promise((resolve) => {
+			// Obsidian fires onClose BEFORE onChooseItem, so we can't resolve
+			// in onClose directly — we'd always race to `null` even when a
+			// file was picked. Instead, stash the chosen file and resolve on
+			// a microtask after the modal tears down, so onChooseItem has a
+			// chance to set `chosen` first.
+			let chosen: string | null = null;
+			let settled = false;
+			const settle = (value: string | null) => {
+				if (settled) return;
+				settled = true;
+				resolve(value);
+			};
+
+			class FilePicker extends FuzzySuggestModal<TFile> {
+				getItems(): TFile[] {
+					return app.vault.getMarkdownFiles();
+				}
+
+				getItemText(item: TFile): string {
+					return item.path;
+				}
+
+				onChooseItem(item: TFile): void {
+					const link = app.metadataCache.fileToLinktext(
+						item,
+						currentPath,
+						true,
+					);
+					chosen = link || item.basename;
+				}
+
+				onClose(): void {
+					super.onClose();
+					queueMicrotask(() => settle(chosen));
+				}
+			}
+
+			const modal = new FilePicker(app);
+			modal.setPlaceholder("Link to note…");
+			modal.modalEl.addClass("rich-text-wikilink-picker");
+			modal.open();
+		});
+	};
 
 	private resolveImagePath = (src: string): string => {
 		const decodedPath = decodeURI(src);

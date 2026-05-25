@@ -47,6 +47,7 @@ import { calloutPlugin, InsertCallout } from "./calloutPlugin";
 import { footnotePlugin, InsertFootnote } from "./footnotePlugin";
 import { autoLinkTitlePlugin } from "./autoLinkTitlePlugin";
 import { PropertiesDisplay, PropertyInfo } from "./PropertiesDisplay";
+import { InsertWikilink } from "./wikilinkButton";
 
 // Languages offered in the code-block language dropdown. Keyed by the fenced
 // code-block id; the value is the human-readable label shown in the dropdown.
@@ -89,6 +90,7 @@ interface Props {
 	onImageUpload: (image: File) => Promise<string>;
 	onResolveImage: (src: string) => string;
 	onNavigate: (path: string) => void;
+	onPickInternalLink: () => Promise<string | null>;
 }
 
 export interface RichTextEditorRef {
@@ -675,6 +677,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 			// Lexical may sanitize custom schemes => href becomes about:blank.
 			// In that case, use the rendered link text as the source of truth.
 			const text = (anchor.textContent ?? "").trim();
+
 			if (
 				href === "about:blank" &&
 				text.startsWith("#") &&
@@ -687,6 +690,39 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 					"_blank",
 					"noopener,noreferrer",
 				);
+				return;
+			}
+
+			// about:blank with non-tag text == sanitized internal link.
+			if (href === "about:blank" && text.length > 0) {
+				props.onNavigate(text);
+				return;
+			}
+
+			// Lexical's link plugin auto-prefixes scheme-less hrefs with
+			// "https://", so a wikilink to "My Note" ends up as
+			// "https://My%20Note". Detect that case by comparing the
+			// stripped href to the rendered text — if they match, it's an
+			// internal link, not a real URL.
+			const strippedHref = (() => {
+				try {
+					return decodeURI(href.replace(/^https?:\/\//i, ""));
+				} catch {
+					return href.replace(/^https?:\/\//i, "");
+				}
+			})();
+			if (text.length > 0 && strippedHref === text) {
+				props.onNavigate(text);
+				return;
+			}
+
+			// Internal links (stored as URI-encoded basenames like
+			// "My%20Note") have no URL scheme — route them through
+			// Obsidian's link opener so the target file opens inside the
+			// workspace instead of the browser.
+			const hasScheme = /^[a-z][a-z0-9+.-]*:/i.test(href);
+			if (!hasScheme) {
+				props.onNavigate(decodeURI(href));
 				return;
 			}
 
@@ -789,6 +825,11 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 									<InsertCodeBlock />
 									<InsertThematicBreak />
 									<CreateLink />
+									<InsertWikilink
+										onPickInternalLink={
+											props.onPickInternalLink
+										}
+									/>
 									<InsertImage />
 									<InsertTable />
 									<InsertCallout />
@@ -828,7 +869,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 						}),
 						linkPlugin(),
 						tagLinkPlugin(),
-						linkDialogPlugin(),
+						linkDialogPlugin({ showLinkTitleField: false }),
 						codeBlockPlugin({ defaultCodeBlockLanguage: "js" }),
 						codeMirrorPlugin({
 							codeBlockLanguages: CODE_BLOCK_LANGUAGES,
