@@ -674,6 +674,74 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 				attributeFilter: ["tabindex"],
 			});
 
+			// Keep the caret visible above the on-screen keyboard. Obsidian
+			// mobile may not update visualViewport when the keyboard opens, so
+			// we compute the visible bottom as the smallest of: the scroller's
+			// own bottom, visualViewport bottom, and window.innerHeight.
+			const findScroller = (): HTMLElement | null =>
+				host.querySelector<HTMLElement>(
+					".mdxeditor-root-contenteditable",
+				);
+			const ensureCaretVisible = () => {
+				const active =
+					activeDocument.activeElement as HTMLElement | null;
+				const focusInEditor =
+					!!active &&
+					(active === editable || editable.contains(active));
+				if (!focusInEditor) return;
+
+				const scroller = findScroller();
+				if (!scroller) return;
+
+				const sel = window.getSelection();
+				if (!sel || sel.rangeCount === 0) return;
+
+				const range = sel.getRangeAt(0).cloneRange();
+				range.collapse(false);
+				let rect = range.getBoundingClientRect();
+				const focusNode = sel.focusNode;
+				const focusEl: Element | null =
+					focusNode?.nodeType === Node.ELEMENT_NODE
+						? (focusNode as Element)
+						: (focusNode?.parentElement ?? null);
+				if (rect.height === 0 && rect.width === 0 && focusEl) {
+					rect = focusEl.getBoundingClientRect();
+				}
+				if (rect.height === 0 && rect.width === 0) return;
+
+				const scrollerRect = scroller.getBoundingClientRect();
+				const viewport = window.visualViewport;
+				const viewportBottom = viewport
+					? viewport.offsetTop + viewport.height
+					: Number.POSITIVE_INFINITY;
+				const visibleBottom = Math.min(
+					scrollerRect.bottom,
+					viewportBottom,
+					window.innerHeight,
+				);
+				const margin = 32;
+				if (rect.bottom <= visibleBottom - margin) return;
+
+				const delta = rect.bottom - (visibleBottom - margin);
+				scroller.scrollTop += delta;
+			};
+			let selectionCheckQueued = false;
+			const onSelectionChange = () => {
+				if (selectionCheckQueued) return;
+				selectionCheckQueued = true;
+				// Multiple passes to cover the iOS keyboard animation window.
+				window.setTimeout(ensureCaretVisible, 50);
+				window.setTimeout(ensureCaretVisible, 350);
+				window.setTimeout(() => {
+					selectionCheckQueued = false;
+					ensureCaretVisible();
+				}, 600);
+			};
+			activeDocument.addEventListener(
+				"selectionchange",
+				onSelectionChange,
+			);
+
 			return () => {
 				editable.removeEventListener(
 					"pointerdown",
@@ -704,6 +772,10 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 					true,
 				);
 				tabIndexObserver.disconnect();
+				activeDocument.removeEventListener(
+					"selectionchange",
+					onSelectionChange,
+				);
 			};
 		}, []);
 
