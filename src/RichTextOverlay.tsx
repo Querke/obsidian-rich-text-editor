@@ -11,10 +11,7 @@ import {
 import { StrictMode } from "react";
 import { createRoot, Root } from "react-dom/client";
 import { RichTextEditor, RichTextEditorRef } from "./RichTextEditor";
-import {
-	mdxCalloutsToObsidian,
-	obsidianCalloutsToMdx,
-} from "./calloutPlugin";
+import { mdxCalloutsToObsidian, obsidianCalloutsToMdx } from "./calloutPlugin";
 import { expandInlineFootnotes } from "./footnotePlugin";
 import { PropertyInfo } from "./PropertiesDisplay";
 
@@ -26,8 +23,17 @@ export class RichTextOverlay {
 	private parentScope: Scope | null = null;
 
 	private renameRef: EventRef;
+	private modifyRef: EventRef;
+	private metadataChangedRef: EventRef;
 	private editorRef: RichTextEditorRef | null = null;
 	private rawFrontmatter = "";
+
+	// Full file text (incl. frontmatter) that this overlay last either
+	// pushed to disk or pulled in. The vault `modify` listener compares this
+	// against the current editor value to tell apart our own writes (skip)
+	// from external changes — sync, Tasks plugin checkbox toggles, edits in
+	// another tab, etc. (refresh).
+	private lastSyncedFullText = "";
 
 	constructor(public view: MarkdownView) {
 		// Create the container inside the view's content element
@@ -65,6 +71,26 @@ export class RichTextOverlay {
 			}
 		});
 
+		// Refresh the rich-text view when the underlying file changes from a
+		// source other than us — external sync, the Tasks plugin toggling a
+		// checkbox inside an embed, edits in another pane, etc. We compare
+		// the current editor value to the last text we ourselves wrote/pulled
+		// to filter out our own saves.
+		// `vault.on("modify")` covers local edits in another pane, Tasks
+		// plugin checkbox toggles, etc. `metadataCache.on("changed")` is the
+		// catch-all that also covers Obsidian Sync writes (which can bypass
+		// the regular modify dispatch). Both call the same refresh helper;
+		// equality-check on lastSyncedFullText filters out our own saves.
+		this.modifyRef = this.view.app.vault.on("modify", (file) => {
+			if (file === this.view.file) this.refreshFromDisk();
+		});
+		this.metadataChangedRef = this.view.app.metadataCache.on(
+			"changed",
+			(file) => {
+				if (file === this.view.file) this.refreshFromDisk();
+			},
+		);
+
 		// NEW: Initialize Scope (but don't activate it yet)
 		// We use the view's app scope as the base
 		this.scope = new Scope(this.view.app.scope);
@@ -77,17 +103,23 @@ export class RichTextOverlay {
 
 		this.scope.register(["Mod"], "i", (evt) => {
 			evt.preventDefault();
-			activeDocument.dispatchEvent(new CustomEvent("plugin:toggle-italic"));
+			activeDocument.dispatchEvent(
+				new CustomEvent("plugin:toggle-italic"),
+			);
 		});
 
 		this.scope.register(["Mod"], "u", (evt) => {
 			evt.preventDefault();
-			activeDocument.dispatchEvent(new CustomEvent("plugin:toggle-underline"));
+			activeDocument.dispatchEvent(
+				new CustomEvent("plugin:toggle-underline"),
+			);
 		});
 
 		this.scope.register(["Mod"], "k", (evt) => {
 			evt.preventDefault();
-			activeDocument.dispatchEvent(new CustomEvent("plugin:show-link-dialog"));
+			activeDocument.dispatchEvent(
+				new CustomEvent("plugin:show-link-dialog"),
+			);
 		});
 
 		this.mount();
@@ -183,7 +215,8 @@ export class RichTextOverlay {
 		// stay as image markdown (MDXEditor renders them). Note embeds are
 		// downgraded to a regular link — otherwise MDXEditor treats the
 		// encoded basename as an image src and tries (and fails) to load it.
-		const MEDIA_EXT = /\.(png|jpe?g|gif|webp|svg|bmp|avif|heic|mp4|mov|webm|mp3|wav|ogg|m4a|flac|pdf)$/i;
+		const MEDIA_EXT =
+			/\.(png|jpe?g|gif|webp|svg|bmp|avif|heic|mp4|mov|webm|mp3|wav|ogg|m4a|flac|pdf)$/i;
 		normalized = normalized.replace(
 			/!\[\[([^|\]]+)(?:\|([^\]]+))?\]\]/g,
 			(_match: string, link: string, alias: string | undefined) => {
@@ -395,12 +428,7 @@ export class RichTextOverlay {
 		if (this.editorRef) {
 			try {
 				const rawText = this.view.editor.getValue();
-				const { raw, body } = this.extractFrontmatter(rawText);
-				this.rawFrontmatter = raw;
-				const cleanText = this.obsidianToMdx(body);
-				this.editorRef.setMarkdown(cleanText);
-				this.editorRef.setTitle(this.view.file?.basename || "Untitled");
-				this.editorRef.setProperties(this.getProperties());
+				this.applyExternalText(rawText);
 			} catch (e) {
 				console.error(
 					"RichTextOverlay: Failed to update editor content",
@@ -412,12 +440,35 @@ export class RichTextOverlay {
 		}
 	}
 
+	private refreshFromDisk() {
+		if (this.root === null || !this.editorRef) return;
+		const file = this.view.file;
+		if (!file) return;
+		void this.view.app.vault.cachedRead(file).then((freshText) => {
+			if (this.root === null || !this.editorRef) return;
+			if (freshText === this.lastSyncedFullText) return;
+			this.applyExternalText(freshText);
+		});
+	}
+
+	private applyExternalText(rawText: string) {
+		if (!this.editorRef) return;
+		this.lastSyncedFullText = rawText;
+		const { raw, body } = this.extractFrontmatter(rawText);
+		this.rawFrontmatter = raw;
+		const cleanText = this.obsidianToMdx(body);
+		this.editorRef.setMarkdown(cleanText);
+		this.editorRef.setTitle(this.view.file?.basename || "Untitled");
+		this.editorRef.setProperties(this.getProperties());
+	}
+
 	render() {
 		if (!this.root || !this.view.editor) return;
 
 		let initialText = "";
 		try {
 			const rawText = this.view.editor.getValue();
+			this.lastSyncedFullText = rawText;
 			const { raw, body } = this.extractFrontmatter(rawText);
 			this.rawFrontmatter = raw;
 			initialText = this.obsidianToMdx(body);
@@ -458,9 +509,10 @@ export class RichTextOverlay {
 						onSave={(newText) => {
 							try {
 								const cleanText = this.mdxToObsidian(newText);
-								this.view.editor.setValue(
-									this.rawFrontmatter + cleanText,
-								);
+								const fullText =
+									this.rawFrontmatter + cleanText;
+								this.lastSyncedFullText = fullText;
+								this.view.editor.setValue(fullText);
 								this.view.requestSave();
 							} catch (e) {
 								console.error(
@@ -477,8 +529,7 @@ export class RichTextOverlay {
 						onRenderEmbed={(el, lang, code) => {
 							const component = new Component();
 							component.load();
-							const source =
-								"```" + lang + "\n" + code + "\n```";
+							const source = "```" + lang + "\n" + code + "\n```";
 							void MarkdownRenderer.render(
 								this.view.app,
 								source,
@@ -507,6 +558,8 @@ export class RichTextOverlay {
 
 	destroy() {
 		this.view.app.vault.offref(this.renameRef);
+		this.view.app.vault.offref(this.modifyRef);
+		this.view.app.metadataCache.offref(this.metadataChangedRef);
 
 		this.toggleScope(false);
 		if (this.root) {
@@ -527,7 +580,8 @@ export class RichTextOverlay {
 
 	updateReadableLineLength() {
 		// @ts-ignore - access internal Obsidian config via this.view.app
-		const vaultConfig = this.view.app.vault as typeof this.view.app.vault & {
+		const vaultConfig = this.view.app
+			.vault as typeof this.view.app.vault & {
 			getConfig?: (key: string) => unknown;
 		};
 		const isReadable =
