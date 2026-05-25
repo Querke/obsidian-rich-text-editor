@@ -45,6 +45,7 @@ import { IndentControls } from "./IndentControls";
 import { tagLinkPlugin } from "./tagLinkPlugin";
 import { calloutPlugin, InsertCallout } from "./calloutPlugin";
 import { footnotePlugin, InsertFootnote } from "./footnotePlugin";
+import { autoLinkTitlePlugin } from "./autoLinkTitlePlugin";
 import { PropertiesDisplay, PropertyInfo } from "./PropertiesDisplay";
 
 // Languages offered in the code-block language dropdown. Keyed by the fenced
@@ -803,6 +804,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 						directivesPlugin({ directiveDescriptors: [] }),
 						calloutPlugin(),
 						footnotePlugin(),
+						autoLinkTitlePlugin(),
 						thematicBreakPlugin(),
 						markdownShortcutPlugin(),
 						tablePlugin(),
