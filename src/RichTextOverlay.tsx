@@ -481,14 +481,21 @@ export class RichTextOverlay {
 		const initialProperties = this.getProperties();
 
 		const handleRename = async (nextBaseName: string): Promise<boolean> => {
-			if (!file) return false;
+			const currentFile = this.view.file;
+			if (!currentFile) return false;
 
 			const dir =
-				file.parent?.path === "/" ? "" : file.parent?.path + "/";
-			const newPath = dir + nextBaseName + "." + file.extension;
+				currentFile.parent?.path === "/"
+					? ""
+					: currentFile.parent?.path + "/";
+			const newPath =
+				dir + nextBaseName + "." + currentFile.extension;
 
 			try {
-				await this.view.app.fileManager.renameFile(file, newPath);
+				await this.view.app.fileManager.renameFile(
+					currentFile,
+					newPath,
+				);
 				return true;
 			} catch (e) {
 				new Notice("Rename failed: " + e);
