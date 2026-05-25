@@ -1434,6 +1434,10 @@ mark {
 
 	display: flex;
 	align-items: center;
+
+	padding-inline-start: 0px;
+	padding: 0px;
+	border-radius: var(--radius-small);
 }
 
 ._addColumnButton_1e2ox_747 svg,
@@ -1469,6 +1473,7 @@ mark {
 	box-sizing: border-box;
 	border-bottom-right-radius: var(--radius-medium);
 	border-bottom-left-radius: var(--radius-medium);
+	height: 18px;
 }
 
 ._addColumnButton_1e2ox_747 {
@@ -2402,7 +2407,6 @@ form._multiFieldForm_1e2ox_1214 ._formField_1e2ox_1220 label {
 .mxeditor-content-editable .footnote-backref:hover {
 	color: var(--text-accent);
 }
-
 
 /* ---------------------------------------------------------------------- */
 /* Obsidian-rendered code block embeds (tasks, dataview, mermaid, …).     */
