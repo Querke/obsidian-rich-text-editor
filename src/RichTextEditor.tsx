@@ -251,6 +251,38 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 			let keyboardDismissPreviousY: number | null = null;
 			let keyboardDismissStartedAboveToolbar = false;
 			let keyboardDismissDidBlur = false;
+			type SelectionSnapshot = {
+				isCollapsed: boolean;
+				anchorNode: Node | null;
+				anchorOffset: number;
+				focusNode: Node | null;
+				focusOffset: number;
+			};
+			let keyboardDismissInitialSelection: SelectionSnapshot | null = null;
+			const snapshotSelection = (): SelectionSnapshot | null => {
+				const sel = window.getSelection();
+				if (!sel) return null;
+				return {
+					isCollapsed: sel.isCollapsed,
+					anchorNode: sel.anchorNode,
+					anchorOffset: sel.anchorOffset,
+					focusNode: sel.focusNode,
+					focusOffset: sel.focusOffset,
+				};
+			};
+			const selectionsDiffer = (
+				a: SelectionSnapshot | null,
+				b: SelectionSnapshot | null,
+			): boolean => {
+				if (!a || !b) return false;
+				return (
+					a.anchorNode !== b.anchorNode ||
+					a.anchorOffset !== b.anchorOffset ||
+					a.focusNode !== b.focusNode ||
+					a.focusOffset !== b.focusOffset ||
+					a.isCollapsed !== b.isCollapsed
+				);
+			};
 
 			const onPointerDownCapture = (evt: PointerEvent) => {
 				const target = evt.target as HTMLElement | null;
@@ -329,6 +361,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 					keyboardDismissPreviousY = null;
 					keyboardDismissStartedAboveToolbar = false;
 					keyboardDismissDidBlur = false;
+					keyboardDismissInitialSelection = null;
 					return;
 				}
 
@@ -356,6 +389,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 					keyboardDismissPreviousY = null;
 					keyboardDismissStartedAboveToolbar = false;
 					keyboardDismissDidBlur = false;
+					keyboardDismissInitialSelection = null;
 					return;
 				}
 
@@ -389,11 +423,38 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 					deltaY > deltaX + 16 &&
 					(crossedToolbarTop || draggedIntoToolbar)
 				) {
+					// If the user is actively manipulating a text selection
+					// (either had one at touchstart, or extended one during
+					// the drag via a selection handle), don't blur — that
+					// would collapse the selection they're working on.
+					const currentSelection = snapshotSelection();
+					const hadSelectionAtStart =
+						!!keyboardDismissInitialSelection &&
+						!keyboardDismissInitialSelection.isCollapsed;
+					const selectionChangedDuringDrag = selectionsDiffer(
+						keyboardDismissInitialSelection,
+						currentSelection,
+					);
+					if (
+						selectionInEditable &&
+						currentSelection &&
+						!currentSelection.isCollapsed &&
+						(hadSelectionAtStart || selectionChangedDuringDrag)
+					) {
+						keyboardDismissTouchStartX = null;
+						keyboardDismissTouchStartY = null;
+						keyboardDismissPreviousY = null;
+						keyboardDismissStartedAboveToolbar = false;
+						keyboardDismissInitialSelection = null;
+						return;
+					}
+
 					keyboardDismissDidBlur = true;
 					keyboardDismissTouchStartX = null;
 					keyboardDismissTouchStartY = null;
 					keyboardDismissPreviousY = null;
 					keyboardDismissStartedAboveToolbar = false;
+					keyboardDismissInitialSelection = null;
 					if (active && active !== activeDocument.body) {
 						active.blur();
 					} else {
@@ -411,6 +472,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 				keyboardDismissPreviousY = null;
 				keyboardDismissStartedAboveToolbar = false;
 				keyboardDismissDidBlur = false;
+				keyboardDismissInitialSelection = null;
 
 				if (!pendingCheckboxLi) return;
 				const li = pendingCheckboxLi;
@@ -491,6 +553,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 				keyboardDismissPreviousY = null;
 				keyboardDismissStartedAboveToolbar = false;
 				keyboardDismissDidBlur = false;
+				keyboardDismissInitialSelection = null;
 				pendingCheckboxLi = null;
 			};
 
@@ -500,6 +563,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 				keyboardDismissPreviousY = null;
 				keyboardDismissStartedAboveToolbar = false;
 				keyboardDismissDidBlur = false;
+				keyboardDismissInitialSelection = null;
 
 				if (!isMobileTouchDevice) {
 					return;
@@ -552,6 +616,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 				keyboardDismissTouchStartY = touch.clientY;
 				keyboardDismissPreviousY = touch.clientY;
 				keyboardDismissStartedAboveToolbar = true;
+				keyboardDismissInitialSelection = snapshotSelection();
 			};
 
 			editable.addEventListener(
