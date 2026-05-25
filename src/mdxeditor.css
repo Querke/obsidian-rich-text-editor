@@ -2389,3 +2389,28 @@ form._multiFieldForm_1e2ox_1214 ._formField_1e2ox_1220 label {
 	color: var(--text-accent);
 }
 
+
+/* ---------------------------------------------------------------------- */
+/* Obsidian-rendered code block embeds (tasks, dataview, mermaid, …).     */
+/* The block is read-only here — editing happens in Obsidian source view. */
+/* ---------------------------------------------------------------------- */
+.mxeditor-content-editable .obsidian-embed {
+	margin: var(--spacing-3) 0;
+	padding: var(--spacing-2);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	background: var(--background-secondary);
+	cursor: default;
+	-webkit-user-select: none;
+	user-select: none;
+}
+
+.mxeditor-content-editable .obsidian-embed-host {
+	cursor: default;
+}
+
+.mxeditor-content-editable .obsidian-embed-fallback {
+	font-family: var(--font-monospace);
+	white-space: pre-wrap;
+	color: var(--text-faint);
+}

@@ -1,6 +1,8 @@
 import {
+	Component,
 	EventRef,
 	FuzzySuggestModal,
+	MarkdownRenderer,
 	MarkdownView,
 	Notice,
 	Scope,
@@ -472,6 +474,20 @@ export class RichTextOverlay {
 						onImageUpload={(file) => this.handleImageUpload(file)}
 						onResolveImage={this.resolveImagePath}
 						onPickInternalLink={this.pickInternalLink}
+						onRenderEmbed={(el, lang, code) => {
+							const component = new Component();
+							component.load();
+							const source =
+								"```" + lang + "\n" + code + "\n```";
+							void MarkdownRenderer.render(
+								this.view.app,
+								source,
+								el,
+								this.view.file?.path ?? "",
+								component,
+							);
+							return () => component.unload();
+						}}
 						onNavigate={(path) => {
 							// Use the void operator to handle the promise returned by openLinkText
 							void this.view.app.workspace.openLinkText(

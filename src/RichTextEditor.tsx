@@ -48,6 +48,11 @@ import { footnotePlugin, InsertFootnote } from "./footnotePlugin";
 import { autoLinkTitlePlugin } from "./autoLinkTitlePlugin";
 import { PropertiesDisplay, PropertyInfo } from "./PropertiesDisplay";
 import { InsertWikilink } from "./wikilinkButton";
+import {
+	EmbedRenderer,
+	obsidianEmbedPlugin,
+	setEditorEmbedRenderer,
+} from "./obsidianEmbedPlugin";
 
 // Languages offered in the code-block language dropdown. Keyed by the fenced
 // code-block id; the value is the human-readable label shown in the dropdown.
@@ -58,7 +63,6 @@ const CODE_BLOCK_LANGUAGES: Record<string, string> = {
 	tsx: "TypeScript (react)",
 	ts: "TypeScript",
 	md: "Markdown",
-	tasks: "Tasks (Obsidian)",
 	html: "HTML",
 	cs: "C#",
 	c: "C",
@@ -91,6 +95,7 @@ interface Props {
 	onResolveImage: (src: string) => string;
 	onNavigate: (path: string) => void;
 	onPickInternalLink: () => Promise<string | null>;
+	onRenderEmbed?: EmbedRenderer;
 }
 
 export interface RichTextEditorRef {
@@ -168,6 +173,41 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 				}
 			}, 0);
 		}, []);
+
+		// Install the Obsidian render bridge on the Lexical editor instance.
+		// Decorator nodes for ```tasks / ```dataview / etc. look it up via the
+		// LexicalEditor handed to them by Lexical's reconciler.
+		useEffect(() => {
+			if (!hostRef.current) return;
+			const renderer = props.onRenderEmbed;
+			if (!renderer) return;
+
+			let cancelled = false;
+			let installedOn: LexicalEditor | null = null;
+
+			const tryInstall = () => {
+				if (cancelled) return;
+				const editable =
+					hostRef.current?.querySelector<LexicalContentEditable>(
+						".mxeditor-content-editable",
+					);
+				const lexicalEditor = editable?.__lexicalEditor ?? null;
+				if (!lexicalEditor) {
+					window.setTimeout(tryInstall, 50);
+					return;
+				}
+				setEditorEmbedRenderer(lexicalEditor, renderer);
+				installedOn = lexicalEditor;
+			};
+			tryInstall();
+
+			return () => {
+				cancelled = true;
+				if (installedOn) {
+					setEditorEmbedRenderer(installedOn, null);
+				}
+			};
+		}, [props.onRenderEmbed]);
 
 		useEffect(() => {
 			if (!hostRef.current) return;
@@ -876,6 +916,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 
 							codeMirrorExtensions: isDark ? [oneDark] : [],
 						}),
+						obsidianEmbedPlugin(),
 					]}
 				/>
 				{propertiesContainer &&
