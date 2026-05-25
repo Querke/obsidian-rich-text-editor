@@ -120,10 +120,9 @@
 }
 
 .rich-text-overlay.is-readable-line-width .mdxeditor-toolbar {
-	/* justify-content: center; */
-	max-width: 904px;
+	width: fit-content;
+	max-width: 100%;
 	margin: 0 auto;
-	width: 100%;
 }
 
 /* ---------------------------------------------------------------------------- */
