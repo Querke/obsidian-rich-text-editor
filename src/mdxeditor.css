@@ -2299,3 +2299,93 @@ form._multiFieldForm_1e2ox_1214 ._formField_1e2ox_1220 label {
 ._mdxExpression_1tncs_188 input:focus-visible {
 	outline: none;
 }
+
+/* --- Footnotes --- */
+
+/* Inline reference: superscript [N] link, mirroring Obsidian's reading view. */
+.mxeditor-content-editable .footnote-ref {
+	font-size: 0.75em;
+	line-height: 0;
+	vertical-align: super;
+	color: var(--text-accent);
+}
+
+.mxeditor-content-editable .footnote-ref .footnote-link {
+	color: inherit;
+	text-decoration: none;
+	cursor: pointer;
+}
+
+.mxeditor-content-editable .footnote-ref .footnote-link:hover {
+	text-decoration: underline;
+}
+
+/* Definition block. We can't inject sibling DOM into a Lexical-managed
+   element (Lexical's MutationObserver would loop), so the identifier and
+   section separator are pure CSS. The body is a normal editable paragraph. */
+.mxeditor-content-editable .footnote-def {
+	padding-top: var(--spacing-1);
+	padding-bottom: 0;
+	color: var(--text-muted);
+	font-size: var(--text-sm);
+	border-top: 1px solid var(--background-modifier-border);
+	margin-top: var(--spacing-4);
+	padding-top: var(--spacing-3);
+}
+
+/* Only the first .footnote-def in the document gets the section separator.
+   `~` (general sibling) matches every def after the first regardless of
+   what intervenes — handles blank-paragraph spacing between defs too. */
+.mxeditor-content-editable .footnote-def ~ .footnote-def {
+	border-top: 0;
+	margin-top: 0;
+	padding-top: var(--spacing-1);
+}
+
+/* The marker is an inline ::before so it sits on the same baseline as the
+   paragraph text. The paragraph itself is `display: inline` (below) so both
+   share the same line box. */
+.mxeditor-content-editable .footnote-def::before {
+	content: attr(data-footnote-id) ".";
+	display: inline-block;
+	min-width: 1.5em;
+	margin-inline-end: 0.5em;
+	color: var(--text-faint);
+	font-variant-numeric: tabular-nums;
+	-webkit-user-select: none;
+	user-select: none;
+}
+
+.mxeditor-content-editable .footnote-def > p {
+	margin: 0;
+	display: inline;
+}
+
+/* Lexical inserts a placeholder <br> inside an empty paragraph to keep it
+   visible. Inside a footnote def the paragraph is rendered inline so the
+   backref sits on the same line; the <br> would force the backref onto a
+   new line whenever the body is empty, so suppress it here. */
+.mxeditor-content-editable .footnote-def > p > br {
+	display: none;
+}
+
+/* Backref decorator host: zero-size in the flow; the inner <a> floats to the
+   right of the last paragraph line so the icon sits at the line-end like
+   Obsidian's reading view. */
+.mxeditor-content-editable .footnote-backref-host {
+	display: inline;
+}
+
+.mxeditor-content-editable .footnote-backref {
+	margin-inline-start: var(--spacing-2);
+	color: var(--text-faint);
+	text-decoration: none;
+	cursor: pointer;
+	-webkit-user-select: none;
+	user-select: none;
+}
+
+.mxeditor-content-editable .footnote-backref:hover {
+	color: var(--text-accent);
+}
+

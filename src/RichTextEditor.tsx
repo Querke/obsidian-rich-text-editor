@@ -44,6 +44,7 @@ import { $isListItemNode } from "@lexical/list";
 import { IndentControls } from "./IndentControls";
 import { tagLinkPlugin } from "./tagLinkPlugin";
 import { calloutPlugin, InsertCallout } from "./calloutPlugin";
+import { footnotePlugin, InsertFootnote } from "./footnotePlugin";
 import { PropertiesDisplay, PropertyInfo } from "./PropertiesDisplay";
 
 // Languages offered in the code-block language dropdown. Keyed by the fenced
@@ -790,6 +791,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 									<InsertImage />
 									<InsertTable />
 									<InsertCallout />
+									<InsertFootnote />
 								</>
 							),
 						}),
@@ -800,6 +802,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 						// grammar; calloutPlugin supplies the callout node.
 						directivesPlugin({ directiveDescriptors: [] }),
 						calloutPlugin(),
+						footnotePlugin(),
 						thematicBreakPlugin(),
 						markdownShortcutPlugin(),
 						tablePlugin(),

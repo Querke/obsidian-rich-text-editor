@@ -6,6 +6,7 @@ import {
 	mdxCalloutsToObsidian,
 	obsidianCalloutsToMdx,
 } from "./calloutPlugin";
+import { expandInlineFootnotes } from "./footnotePlugin";
 import { PropertyInfo } from "./PropertiesDisplay";
 
 export class RichTextOverlay {
@@ -192,6 +193,12 @@ export class RichTextOverlay {
 		// directives. Done after links/tags so callout content is converted too.
 		normalized = obsidianCalloutsToMdx(normalized);
 
+		// Footnotes: expand Obsidian's `^[content]` shorthand to a regular
+		// `[^id]` reference plus a definition appended at the end. Done before
+		// the paragraph splitter so the generated definitions become their own
+		// paragraph blocks.
+		normalized = expandInlineFootnotes(normalized);
+
 		// 2. MDXEditor NEEDS spaces for lists, but handles content tabs as entities
 		normalized = normalized.replace(/([^\n\t])\t/g, "$1&#x9;");
 
@@ -293,7 +300,30 @@ export class RichTextOverlay {
 			}
 		}
 
-		return paragraphs.join("\n\n");
+		// Drop blank paragraphs that sit between two footnote definitions.
+		// Obsidian users often space definitions out visually (`[^1]: foo\n\n
+		// [^2]: bar`) but the rich-text view should render them as a compact
+		// list, the way Obsidian's own reading view does.
+		const isFootnoteDef = (block: string) =>
+			/^\s{0,3}\[\^[^\]\s]+\]:/.test(block);
+		const isBlankBlock = (block: string) =>
+			block === "&#x20;" || block.trim().length === 0;
+		const compacted: string[] = [];
+		for (let i = 0; i < paragraphs.length; i++) {
+			const block = paragraphs[i];
+			if (
+				isBlankBlock(block) &&
+				compacted.length > 0 &&
+				isFootnoteDef(compacted[compacted.length - 1]) &&
+				i + 1 < paragraphs.length &&
+				isFootnoteDef(paragraphs[i + 1])
+			) {
+				continue;
+			}
+			compacted.push(block);
+		}
+
+		return compacted.join("\n\n");
 	};
 
 	private extractFrontmatter(text: string): { raw: string; body: string } {
