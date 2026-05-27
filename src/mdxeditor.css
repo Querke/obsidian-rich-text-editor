@@ -151,20 +151,6 @@ div[class*="linkDialogPopoverContent"] {
 	box-sizing: border-box;
 }
 
-/* Center MDXEditor popovers in the viewport instead of anchoring them to
-   the selection — Radix positions them via inline transform/top/left, so
-   override with !important. */
-div[class*="linkDialogPopoverContent"],
-div[class*="tableColumnEditorPopoverContent"] {
-	position: fixed !important;
-	top: 50% !important;
-	left: 50% !important;
-	transform: translate(-50%, -50%) !important;
-	inset: auto !important;
-	margin: 0 !important;
-	z-index: 1000;
-}
-
 /* 2. Ensure the form inside fills that width */
 form[class*="multiFieldForm"] {
 	width: 100%;
@@ -2169,7 +2155,7 @@ form._multiFieldForm_1e2ox_1214 ._formField_1e2ox_1220 label {
 }
 
 ._underlineStrikethrough_1tncs_38 {
-	text-decoration: underline line-through;
+	text-decoration-line: underline line-through;
 }
 
 ._subscript_1tncs_42 {
@@ -2343,7 +2329,6 @@ form._multiFieldForm_1e2ox_1214 ._formField_1e2ox_1220 label {
    element (Lexical's MutationObserver would loop), so the identifier and
    section separator are pure CSS. The body is a normal editable paragraph. */
 .mxeditor-content-editable .footnote-def {
-	padding-top: var(--spacing-1);
 	padding-bottom: 0;
 	color: var(--text-muted);
 	font-size: var(--text-sm);
