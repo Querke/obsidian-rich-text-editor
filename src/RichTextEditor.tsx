@@ -1003,6 +1003,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 					onChange={handleContentChange}
 					contentEditableClassName="mxeditor-content-editable"
 					suppressHtmlProcessing={true}
+					toMarkdownOptions={{ listItemIndent: "tab" }}
 					plugins={[
 						toolbarPlugin({
 							toolbarContents: () => (

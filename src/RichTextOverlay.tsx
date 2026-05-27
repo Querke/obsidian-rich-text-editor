@@ -203,7 +203,7 @@ export class RichTextOverlay {
 		// Remove this block if you are happy with Spaces in Obsidian
 		output = output.replace(/^(\s+)/gm, (match) => {
 			// Replace every 2 spaces with 1 tab using an explicit quantifier
-			return match.replace(/\x20{2}/g, "\t");
+			return match.replace(/\x20{4}/g, "\t");
 		});
 
 		return output;
@@ -342,7 +342,7 @@ export class RichTextOverlay {
 			// B. Convert Structural Indentation
 			const leadingWhitespace = line.match(/^\s*/)?.[0] || "";
 			if (leadingWhitespace.includes("\t")) {
-				const newPrefix = leadingWhitespace.replace(/\t/g, "  ");
+				const newPrefix = leadingWhitespace.replace(/\t/g, "    ");
 				line = newPrefix + line.substring(leadingWhitespace.length);
 			}
 
