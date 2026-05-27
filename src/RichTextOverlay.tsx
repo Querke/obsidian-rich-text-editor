@@ -35,6 +35,20 @@ export class RichTextOverlay {
 	// another tab, etc. (refresh).
 	private lastSyncedFullText = "";
 
+	// Ring buffer of the last N texts we wrote. `requestSave` is debounced
+	// and `metadataCache.changed` can fire on an older parse, so a stale
+	// version of the file can echo back through after lastSyncedFullText has
+	// already moved on. If `freshText` matches anything in this buffer it's
+	// still one of our own saves catching up — not an external edit.
+	private recentWrites: string[] = [];
+	private static readonly RECENT_WRITES_MAX = 16;
+	private rememberWrite(text: string) {
+		this.recentWrites.push(text);
+		if (this.recentWrites.length > RichTextOverlay.RECENT_WRITES_MAX) {
+			this.recentWrites.shift();
+		}
+	}
+
 	constructor(public view: MarkdownView) {
 		// Create the container inside the view's content element
 		this.container = createDiv();
@@ -450,13 +464,19 @@ export class RichTextOverlay {
 		void this.view.app.vault.cachedRead(file).then((freshText) => {
 			if (this.root === null || !this.editorRef) return;
 			if (freshText === this.lastSyncedFullText) return;
-			// While the user types quickly, multiple onSave writes can be
-			// in flight; lastSyncedFullText only tracks the most recent one,
-			// so an earlier write's `modify` event would otherwise look
-			// external and snap the cursor to the start. The Obsidian editor
-			// already holds the latest text we pushed, so if disk matches
-			// that, it's still our own save catching up — skip the refresh.
-			if (freshText === this.view.editor.getValue()) return;
+			// Debounced saves + delayed metadataCache reparses mean an older
+			// version of our own write can echo back here after lastSynced
+			// has already advanced. Check the recent-writes ring buffer: if
+			// disk matches any text we wrote in the recent past, it's still
+			// us, not an external editor.
+			//
+			// We deliberately do NOT compare against `view.editor.getValue()`
+			// here: when an external writer (Notepad, Obsidian Sync, etc.)
+			// modifies the file, Obsidian eagerly pushes the new disk
+			// content into `view.editor`, so by the time this callback runs
+			// `editor.getValue()` already equals `freshText` — skipping on
+			// that match would silently swallow legitimate external edits.
+			if (this.recentWrites.includes(freshText)) return;
 			this.applyExternalText(freshText);
 		});
 	}
@@ -464,6 +484,7 @@ export class RichTextOverlay {
 	private applyExternalText(rawText: string) {
 		if (!this.editorRef) return;
 		this.lastSyncedFullText = rawText;
+		this.rememberWrite(rawText);
 		const { raw, body } = this.extractFrontmatter(rawText);
 		this.rawFrontmatter = raw;
 		const cleanText = this.obsidianToMdx(body);
@@ -479,6 +500,7 @@ export class RichTextOverlay {
 		try {
 			const rawText = this.view.editor.getValue();
 			this.lastSyncedFullText = rawText;
+			this.rememberWrite(rawText);
 			const { raw, body } = this.extractFrontmatter(rawText);
 			this.rawFrontmatter = raw;
 			initialText = this.obsidianToMdx(body);
@@ -529,6 +551,7 @@ export class RichTextOverlay {
 								const fullText =
 									this.rawFrontmatter + cleanText;
 								this.lastSyncedFullText = fullText;
+								this.rememberWrite(fullText);
 								this.view.editor.setValue(fullText);
 								this.view.requestSave();
 							} catch (e) {

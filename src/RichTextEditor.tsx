@@ -130,6 +130,11 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 				setInternalTitle(newTitle);
 			},
 			setMarkdown: (markdown: string) => {
+				// Skip no-op writes: MDXEditor.setMarkdown rebuilds the
+				// Lexical tree and snaps the cursor to the document start,
+				// so calling it with the current content makes the cursor
+				// jump mid-typing. Only push when the text actually changed.
+				if (editorRef.current?.getMarkdown() === markdown) return;
 				editorRef.current?.setMarkdown(markdown);
 			},
 			setProperties: (props: PropertyInfo[]) => {
