@@ -685,7 +685,10 @@ export class RichTextOverlay {
 				}
 
 				getItemText(item: TFile): string {
-					return item.path;
+					const withoutExt = item.path.endsWith(".md")
+						? item.path.slice(0, -3)
+						: item.path;
+					return withoutExt.replace(/\//g, " / ");
 				}
 
 				onChooseItem(item: TFile): void {
