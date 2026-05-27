@@ -447,6 +447,13 @@ export class RichTextOverlay {
 		void this.view.app.vault.cachedRead(file).then((freshText) => {
 			if (this.root === null || !this.editorRef) return;
 			if (freshText === this.lastSyncedFullText) return;
+			// While the user types quickly, multiple onSave writes can be
+			// in flight; lastSyncedFullText only tracks the most recent one,
+			// so an earlier write's `modify` event would otherwise look
+			// external and snap the cursor to the start. The Obsidian editor
+			// already holds the latest text we pushed, so if disk matches
+			// that, it's still our own save catching up — skip the refresh.
+			if (freshText === this.view.editor.getValue()) return;
 			this.applyExternalText(freshText);
 		});
 	}
