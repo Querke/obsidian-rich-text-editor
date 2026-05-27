@@ -878,9 +878,13 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 
 			// Lexical's link plugin auto-prefixes scheme-less hrefs with
 			// "https://", so a wikilink to "My Note" ends up as
-			// "https://My%20Note". Detect that case by comparing the
-			// stripped href to the rendered text — if they match, it's an
-			// internal link, not a real URL.
+			// "https://My%20Note". Two cases to detect:
+			//   1. Non-aliased: stripped href matches the rendered text.
+			//   2. Aliased ([Alias](My Note)): text is the alias, so it
+			//      won't match — instead, check that the "hostname" portion
+			//      contains no dot. Real domains always have a TLD; vault
+			//      basenames almost never do.
+			const wasAutoPrefixed = /^https?:\/\//i.test(href);
 			const strippedHref = (() => {
 				try {
 					return decodeURI(href.replace(/^https?:\/\//i, ""));
@@ -891,6 +895,16 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 			if (text.length > 0 && strippedHref === text) {
 				props.onNavigate(text);
 				return;
+			}
+			if (wasAutoPrefixed) {
+				const hostPart = strippedHref
+					.split("/")[0]
+					.split("#")[0]
+					.split("?")[0];
+				if (hostPart.length > 0 && !hostPart.includes(".")) {
+					props.onNavigate(strippedHref);
+					return;
+				}
 			}
 
 			// Internal links (stored as URI-encoded basenames like
