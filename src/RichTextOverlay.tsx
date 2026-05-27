@@ -200,8 +200,11 @@ export class RichTextOverlay {
 		let normalized = obsidian.replace(/\r\n/g, "\n");
 
 		// --- TAGS: #tag -> [#tag](tag:tag) ---
+		// `[` is intentionally excluded from the prefix class so `[[#heading]]`
+		// (Obsidian's link-to-heading-in-current-note syntax) is not mistaken
+		// for a tag and mangled before the wikilink regex below can claim it.
 		normalized = normalized.replace(
-			/(^|[\s([{>])#([A-Za-z0-9_/-]+)\b/gm,
+			/(^|[\s({>])#([A-Za-z0-9_/-]+)\b/gm,
 			(match: string, prefix: string, tag: string) => {
 				const cleanTag = String(tag).trim();
 				if (cleanTag.length === 0) {
