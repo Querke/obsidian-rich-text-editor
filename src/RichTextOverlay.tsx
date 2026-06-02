@@ -545,8 +545,17 @@ export class RichTextOverlay {
 		const frontmatter = cache?.frontmatter;
 		if (!frontmatter) return [];
 
-		// @ts-ignore — metadataTypeManager is internal
-		const typeManager = (this.view.app as any).metadataTypeManager;
+		// metadataTypeManager is an internal (untyped) Obsidian API that maps
+		// each frontmatter key to its configured property type.
+		type MetadataPropertyEntry = { widget?: string; type?: string };
+		type MetadataTypeManager = {
+			properties?:
+				| Map<string, MetadataPropertyEntry | string>
+				| Record<string, MetadataPropertyEntry | string>;
+		};
+		const typeManager = (
+			this.view.app as { metadataTypeManager?: MetadataTypeManager }
+		).metadataTypeManager;
 
 		const resolveType = (key: string): string => {
 			if (!typeManager) return "text";
@@ -564,7 +573,7 @@ export class RichTextOverlay {
 			.filter(([key]) => key !== "position")
 			.map(([key, value]) => ({
 				key,
-				value,
+				value: value as unknown,
 				type: resolveType(key),
 			}));
 	}

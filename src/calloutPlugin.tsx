@@ -345,7 +345,7 @@ export class CalloutNode extends ElementNode {
 	}
 
 	createDOM(): HTMLElement {
-		const dom = document.createElement("div");
+		const dom = activeDocument.createElement("div");
 		dom.className = "callout";
 		dom.setAttribute("data-callout", this.__calloutType);
 		dom.setAttribute("data-callout-fold", this.__fold);
@@ -438,7 +438,7 @@ export class CalloutTitleNode extends DecoratorNode<ReactElement> {
 	}
 
 	createDOM(): HTMLElement {
-		const dom = document.createElement("div");
+		const dom = activeDocument.createElement("div");
 		dom.className = "callout-title-host";
 		dom.contentEditable = "false";
 		return dom;
@@ -650,7 +650,7 @@ const MdastCalloutVisitor: MdastImportVisitor<never> = {
 		node.append($createCalloutTitleNode());
 		// Append the callout, then visit the directive's children as its body.
 		(lexicalParent as ElementNode).append(node);
-		actions.visitChildren(mdastNode as never, node);
+		actions.visitChildren(mdastNode, node);
 		// Ensure the body ends with a paragraph (a cursor target). Done here —
 		// not just via the node transform — because transforms do not run on
 		// the document that is imported when the editor first loads.
@@ -792,6 +792,7 @@ export const calloutPlugin = realmPlugin({
 			queueMicrotask(() => {
 				editor.update(
 					() => {
+						// eslint-disable-next-line @typescript-eslint/no-deprecated -- one-shot scan inside an update; a mutation listener would change the heal-on-import architecture.
 						for (const callout of $nodesOfType(CalloutNode)) {
 							healCallout(callout);
 						}

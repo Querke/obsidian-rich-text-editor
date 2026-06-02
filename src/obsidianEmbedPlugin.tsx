@@ -113,7 +113,7 @@ export class ObsidianEmbedNode extends DecoratorNode<ReactElement> {
 	}
 
 	createDOM(): HTMLElement {
-		const dom = document.createElement("div");
+		const dom = activeDocument.createElement("div");
 		dom.className = "obsidian-embed";
 		dom.setAttribute("data-embed-lang", this.__lang);
 		dom.contentEditable = "false";

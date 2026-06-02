@@ -77,7 +77,7 @@ import {
 // After a round-trip it stays in normalized form, which matches Obsidian's
 // own reading-view (the shorthand is purely a typing convenience).
 
-const INLINE_SHORTHAND_REGEX = /\^\[((?:[^\[\]\\]|\\.)*)\]/g;
+const INLINE_SHORTHAND_REGEX = /\^\[((?:[^[\]\\]|\\.)*)\]/g;
 
 /** Returns markdown with every `^[content]` replaced by `[^autoN]` and the
  *  generated definitions appended at the end of the document. */
@@ -93,7 +93,7 @@ export function expandInlineFootnotes(markdown: string): string {
 			id = `auto-fn-${counter}`;
 		} while (used.has(id));
 		used.add(id);
-		appended.push(`[^${id}]: ${body.replace(/\\([\[\]])/g, "$1")}`);
+		appended.push(`[^${id}]: ${body.replace(/\\([[\]])/g, "$1")}`);
 		return `[^${id}]`;
 	});
 
@@ -152,7 +152,7 @@ export class FootnoteReferenceNode extends DecoratorNode<ReactElement> {
 	}
 
 	createDOM(): HTMLElement {
-		const dom = document.createElement("sup");
+		const dom = activeDocument.createElement("sup");
 		dom.className = "footnote-ref";
 		dom.setAttribute("data-footnote-id", this.__identifier);
 		return dom;
@@ -233,7 +233,7 @@ export class FootnoteDefinitionNode extends ElementNode {
 	}
 
 	createDOM(): HTMLElement {
-		const dom = document.createElement("div");
+		const dom = activeDocument.createElement("div");
 		dom.className = "footnote-def";
 		dom.setAttribute("data-footnote-id", this.__identifier);
 		return dom;
@@ -315,7 +315,7 @@ export class FootnoteBackrefNode extends DecoratorNode<ReactElement> {
 	}
 
 	createDOM(): HTMLElement {
-		const dom = document.createElement("span");
+		const dom = activeDocument.createElement("span");
 		dom.className = "footnote-backref-host";
 		dom.contentEditable = "false";
 		return dom;
@@ -477,7 +477,7 @@ const MdastFootnoteDefinitionVisitor: MdastImportVisitor<never> = {
 		const def = mdastNode as unknown as FootnoteDefinitionMdastNode;
 		const node = $createFootnoteDefinitionNode(def.identifier);
 		(lexicalParent as ElementNode).append(node);
-		actions.visitChildren(mdastNode as never, node);
+		actions.visitChildren(mdastNode, node);
 		const last = node.getLastChild();
 		if (!last || !$isElementNode(last)) {
 			node.append($createParagraphNode());
@@ -586,6 +586,7 @@ function handleFootnoteBackspace(event: KeyboardEvent | null): boolean {
 		}
 		event?.preventDefault();
 		const identifier = parent.getIdentifier();
+		// eslint-disable-next-line @typescript-eslint/no-deprecated -- one-shot scan inside an update; a mutation listener would change the control flow here.
 		for (const ref of $nodesOfType(FootnoteReferenceNode)) {
 			if (ref.getIdentifier() === identifier) {
 				ref.remove();
@@ -654,6 +655,7 @@ export const footnotePlugin = realmPlugin({
 			queueMicrotask(() => {
 				editor.update(
 					() => {
+						// eslint-disable-next-line @typescript-eslint/no-deprecated -- one-shot heal-on-import scan; a mutation listener would change this architecture.
 						for (const def of $nodesOfType(FootnoteDefinitionNode)) {
 							healDefinition(def);
 						}
@@ -700,9 +702,11 @@ export function InsertFootnote() {
 			// Generate an identifier that doesn't collide with anything that
 			// already exists in the document.
 			const taken = new Set<string>();
+			// eslint-disable-next-line @typescript-eslint/no-deprecated -- one-shot scan to collect existing identifiers before inserting a new footnote.
 			for (const def of $nodesOfType(FootnoteDefinitionNode)) {
 				taken.add(def.getIdentifier());
 			}
+			// eslint-disable-next-line @typescript-eslint/no-deprecated -- one-shot scan to collect existing identifiers before inserting a new footnote.
 			for (const ref of $nodesOfType(FootnoteReferenceNode)) {
 				taken.add(ref.getIdentifier());
 			}

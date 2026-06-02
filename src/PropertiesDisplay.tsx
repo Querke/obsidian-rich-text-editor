@@ -18,6 +18,24 @@ const TYPE_ICONS: Record<string, string> = {
 	multitext: "list",
 };
 
+// Frontmatter values are `unknown` (strings, numbers, booleans, or arrays of
+// those in normal use). Stringify primitives directly; fall back to JSON for
+// the rare nested object so we never render the useless "[object Object]".
+function toDisplayString(value: unknown): string {
+	if (value === null || value === undefined) return "";
+	if (typeof value === "string") return value;
+	if (
+		typeof value === "number" ||
+		typeof value === "boolean" ||
+		typeof value === "bigint"
+	) {
+		return String(value);
+	}
+	// Objects/arrays (and the rare symbol/function): JSON instead of the
+	// useless "[object Object]". JSON.stringify can return undefined.
+	return JSON.stringify(value) ?? "";
+}
+
 function ObsidianIcon({ name, className }: { name: string; className?: string }) {
 	const ref = useRef<HTMLSpanElement>(null);
 	useEffect(() => {
@@ -43,9 +61,9 @@ function PropertyValue({ prop }: { prop: PropertyInfo }) {
 
 	if (type === "tags" || type === "aliases" || type === "multitext") {
 		const items = Array.isArray(value)
-			? value.map(String)
+			? value.map(toDisplayString)
 			: value
-				? [String(value)]
+				? [toDisplayString(value)]
 				: [];
 		if (items.length === 0) {
 			return (
@@ -68,7 +86,7 @@ function PropertyValue({ prop }: { prop: PropertyInfo }) {
 	}
 
 	if (type === "date" || type === "datetime") {
-		const display = value ? String(value) : "";
+		const display = value ? toDisplayString(value) : "";
 		if (!display) {
 			return (
 				<span className="metadata-input metadata-input-text metadata-value-empty">
@@ -93,13 +111,13 @@ function PropertyValue({ prop }: { prop: PropertyInfo }) {
 		}
 		return (
 			<span className="metadata-input metadata-input-number">
-				{String(value)}
+				{toDisplayString(value)}
 			</span>
 		);
 	}
 
 	// Default: text
-	const textVal = value ? String(value) : "";
+	const textVal = value ? toDisplayString(value) : "";
 	if (!textVal) {
 		return (
 			<div className="metadata-input-longtext metadata-value-empty">

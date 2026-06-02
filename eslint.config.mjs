@@ -29,6 +29,17 @@ export default defineConfig([
 			"obsidianmd/sample-names": "off",
 			// example: add a rule not in the recommended set and set its severity
 			"obsidianmd/prefer-file-manager-trash-file": "error",
+			// TypeScript already reports undefined identifiers, and it
+			// understands ambient globals like the `React` type namespace
+			// (`export as namespace React`) that `no-undef` cannot see.
+			"no-undef": "off",
+			// We alias `this` to `plugin` when patching Obsidian command
+			// prototypes, where the replacement `function` needs its own
+			// runtime `this` for the original `.call(this, …)`.
+			"@typescript-eslint/no-this-alias": [
+				"error",
+				{ allowDestructuring: true, allowedNames: ["plugin"] },
+			],
 		},
 	},
 ]);

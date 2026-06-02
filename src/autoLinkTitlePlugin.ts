@@ -46,7 +46,7 @@ function extractTitle(html: string): string | null {
 	if (!match) return null;
 	const decoded = decodeEntities(match[1]).trim();
 	// Strip [ and ] so the rendered markdown stays valid; collapse whitespace.
-	const cleaned = decoded.replace(/[\[\]]/g, "").replace(/\s+/g, " ").trim();
+	const cleaned = decoded.replace(/[[\]]/g, "").replace(/\s+/g, " ").trim();
 	return cleaned.length > 0 ? cleaned : null;
 }
 
@@ -71,7 +71,7 @@ async function fetchTitle(url: string): Promise<string | null> {
 	})();
 
 	const timeout = new Promise<null>((resolve) =>
-		setTimeout(() => resolve(null), FETCH_TIMEOUT_MS),
+		window.setTimeout(() => resolve(null), FETCH_TIMEOUT_MS),
 	);
 
 	return Promise.race([fetcher, timeout]);
@@ -84,9 +84,7 @@ export const autoLinkTitlePlugin = realmPlugin({
 				const text = event.clipboardData
 					?.getData("text/plain")
 					?.trim();
-				console.log("[autoLinkTitle] paste fired, text=", text);
 				if (!text || !URL_RE.test(text)) {
-					console.log("[autoLinkTitle] not a bare URL, skipping");
 					return;
 				}
 
@@ -101,9 +99,6 @@ export const autoLinkTitlePlugin = realmPlugin({
 				editor.update(() => {
 					const selection = $getSelection();
 					if (!$isRangeSelection(selection)) {
-						console.log(
-							"[autoLinkTitle] no range selection, aborting insert",
-						);
 						return;
 					}
 
@@ -116,31 +111,15 @@ export const autoLinkTitlePlugin = realmPlugin({
 						placeholderKey = linkNode.getKey();
 					}
 					selection.insertNodes([linkNode]);
-					console.log(
-						"[autoLinkTitle] inserted link, key=",
-						linkNode.getKey(),
-						"selectedText=",
-						selected,
-					);
 				});
 
 				if (placeholderKey === null) return;
 				const key = placeholderKey;
 
 				void fetchTitle(text).then((title) => {
-					console.log(
-						"[autoLinkTitle] fetch resolved, title=",
-						title,
-					);
 					editor.update(
 						() => {
 							const node = $getNodeByKey(key);
-							console.log(
-								"[autoLinkTitle] lookup node, isLink=",
-								$isLinkNode(node),
-								"node=",
-								node,
-							);
 							if (!$isLinkNode(node)) return;
 							const display = title ?? text;
 							// Append the new text BEFORE removing the old
@@ -153,10 +132,6 @@ export const autoLinkTitlePlugin = realmPlugin({
 									child.remove();
 								}
 							}
-							console.log(
-								"[autoLinkTitle] replaced placeholder with",
-								display,
-							);
 						},
 						{ tag: "history-merge" },
 					);

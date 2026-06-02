@@ -146,7 +146,6 @@ export function SearchBar() {
 		searchInputRef.current?.focus();
 		searchInputRef.current?.select();
 		if (term) setSearch(term);
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [isSearchOpen]);
 
 	// Escape closes the bar from anywhere inside the editor — including when
@@ -169,7 +168,6 @@ export function SearchBar() {
 		container.addEventListener("keydown", onKeyDown, true);
 		return () =>
 			container.removeEventListener("keydown", onKeyDown, true);
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [isSearchOpen]);
 
 	// On mobile, keep the bar sitting just above the formatting toolbar by

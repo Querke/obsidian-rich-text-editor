@@ -210,12 +210,14 @@ export default class RichTextPlugin extends Plugin {
 			// behaviour so the standard editor search still works.
 			const view = plugin.app.workspace.getActiveViewOfType(MarkdownView);
 			if (original.editorCheckCallback && view) {
+				// `.call` is typed `any` here (strictBindCallApply is off), so
+				// annotate the result to keep the return type sound.
 				const res = original.editorCheckCallback.call(
 					cmd,
 					checking,
 					view.editor,
 					view,
-				);
+				) as boolean | void;
 				return checking ? (res ?? false) : true;
 			}
 			if (original.editorCallback && view) {
@@ -225,7 +227,9 @@ export default class RichTextPlugin extends Plugin {
 				return true;
 			}
 			if (original.checkCallback) {
-				const res = original.checkCallback.call(cmd, checking);
+				const res = original.checkCallback.call(cmd, checking) as
+					| boolean
+					| void;
 				return checking ? (res ?? false) : true;
 			}
 			if (original.callback) {
