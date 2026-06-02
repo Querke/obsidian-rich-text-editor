@@ -285,6 +285,17 @@ export class RichTextOverlay {
 		const isList = (line: string) => /^\s*(-|\*|\d+\.)\s/.test(line);
 		// NEW: Check if line is a table row
 		const isTable = (line: string) => line.trim().startsWith("|");
+		// Look ahead past blank lines to decide whether a blank line sits
+		// *inside* a list (i.e. the next content is another list item). Such
+		// blanks belong to the list as a "loose" list and must not be turned
+		// into a spacer paragraph that splits the list apart.
+		const nextNonBlankIsList = (idx: number) => {
+			for (let j = idx + 1; j < lines.length; j++) {
+				if (lines[j].trim().length === 0) continue;
+				return isList(lines[j]);
+			}
+			return false;
+		};
 
 		// Tracks how deeply nested we are inside `:::callout` directive fences.
 		// While inside one, every line is kept verbatim and joined with a
@@ -297,6 +308,13 @@ export class RichTextOverlay {
 		// blank-line-separated paragraphs.
 		let codeFence: string | null = null;
 
+		// Tracks whether the current open paragraph block is a list, so that
+		// consecutive list items (even across blank lines) stay in one block.
+		// `pendingBlankInList` remembers that a loose-list blank line is owed
+		// before the next item is appended.
+		let inListBlock = false;
+		let pendingBlankInList = false;
+
 		for (let i = 0; i < lines.length; i++) {
 			let line = lines[i];
 
@@ -304,6 +322,8 @@ export class RichTextOverlay {
 			const isDirectiveClose = /^:{3,}\s*$/.test(line);
 
 			if (isDirectiveOpen || directiveDepth > 0) {
+				inListBlock = false;
+				pendingBlankInList = false;
 				if (isDirectiveOpen && directiveDepth === 0) {
 					paragraphs.push(line);
 				} else {
@@ -321,6 +341,8 @@ export class RichTextOverlay {
 			// single newline) so multi-line code — Tasks queries, JS, etc. —
 			// stays a single block instead of being split into paragraphs.
 			if (codeFence !== null) {
+				inListBlock = false;
+				pendingBlankInList = false;
 				paragraphs[paragraphs.length - 1] += "\n" + line;
 				const close = line.match(/^\s*(`{3,}|~{3,})\s*$/);
 				if (
@@ -334,6 +356,8 @@ export class RichTextOverlay {
 			}
 			const fenceOpen = line.match(/^\s*(`{3,}|~{3,})/);
 			if (fenceOpen) {
+				inListBlock = false;
+				pendingBlankInList = false;
 				codeFence = fenceOpen[1];
 				paragraphs.push(line);
 				continue;
@@ -347,8 +371,19 @@ export class RichTextOverlay {
 			}
 
 			// Restore your original empty line handling
-			// This ensures vertical spacing is preserved exactly as you had it
-			if (line.length === 0) {
+			// This ensures vertical spacing is preserved exactly as you had it.
+			// A blank line between two list items stays inside the list block
+			// (a "loose" list) — otherwise the spacer paragraph splits the list
+			// and the indented continuation is reparsed as an indented code
+			// block. `trim` also catches whitespace-only lines (e.g. an indented
+			// blank line between sub-list items).
+			if (line.trim().length === 0) {
+				if (inListBlock && nextNonBlankIsList(i)) {
+					pendingBlankInList = true;
+					continue;
+				}
+				inListBlock = false;
+				pendingBlankInList = false;
 				paragraphs.push("&#x20;");
 				continue;
 			}
@@ -358,17 +393,32 @@ export class RichTextOverlay {
 			);
 
 			// C. Smart Joining
-			const prevLine = i > 0 ? lines[i - 1] : "";
+			// Keep an entire list (including loose blank lines) in one block so
+			// MDXEditor parses the nesting correctly.
+			if (isList(line)) {
+				if (inListBlock) {
+					paragraphs[paragraphs.length - 1] +=
+						(pendingBlankInList ? "\n\n" : "\n") +
+						withTrailingSpaces;
+				} else {
+					paragraphs.push(withTrailingSpaces);
+					inListBlock = true;
+				}
+				pendingBlankInList = false;
+				continue;
+			}
 
-			// Logic: Join with single \n if it's a continuing List OR a continuing Table
-			const isTightList =
-				isList(line) && isList(prevLine) && prevLine.trim().length > 0;
+			inListBlock = false;
+			pendingBlankInList = false;
+
+			// Tables: join consecutive rows with a single newline.
+			const prevLine = i > 0 ? lines[i - 1] : "";
 			const isTightTable =
 				isTable(line) &&
 				isTable(prevLine) &&
 				prevLine.trim().length > 0;
 
-			if (isTightList || isTightTable) {
+			if (isTightTable) {
 				// Attach to previous block with single newline (preserves structure)
 				paragraphs[paragraphs.length - 1] += "\n" + withTrailingSpaces;
 			} else {
