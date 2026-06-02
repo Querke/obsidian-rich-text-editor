@@ -6,8 +6,43 @@ import {
 	TFile,
 	setIcon,
 	View,
+	Editor,
 } from "obsidian";
 import { RichTextOverlay } from "./src/RichTextOverlay";
+
+// Obsidian's command registry and Command callback shapes aren't fully in the
+// public typings. We patch the search command objects directly (rather than the
+// dispatch methods) because, when the rich-text overlay is focused, Obsidian
+// sees no active CodeMirror editor and the built-in editor commands report
+// themselves unavailable — so they never dispatch at all. Converting them to a
+// checkCallback lets us control availability and capture every invocation path.
+type EditorLike = Editor;
+interface ObsidianCommand {
+	id?: string;
+	callback?: () => unknown;
+	checkCallback?: (checking: boolean) => boolean | void;
+	editorCallback?: (editor: EditorLike, ctx: MarkdownView) => unknown;
+	editorCheckCallback?: (
+		checking: boolean,
+		editor: EditorLike,
+		ctx: MarkdownView,
+	) => boolean | void;
+}
+interface CommandsRegistry {
+	commands?: Record<string, ObsidianCommand>;
+	editorCommands?: Record<string, ObsidianCommand>;
+}
+
+// The tab/view-header menu's "Find..." / "Replace..." items don't go through a
+// command — they call `showSearch()` / `showSearch(true)` directly on the
+// MarkdownView's editor mode. We patch that method's prototype too.
+interface EditorSearchMode {
+	showSearch?: (replace?: boolean) => unknown;
+}
+
+// Built-in find/replace commands we redirect into the rich-text search bar.
+const SEARCH_COMMAND_ID = "editor:open-search";
+const SEARCH_REPLACE_COMMAND_ID = "editor:open-search-replace";
 import "./src/view.css";
 import "./src/mdxeditor.css";
 
@@ -29,6 +64,8 @@ export default class RichTextPlugin extends Plugin {
 
 	async onload() {
 		await this.loadSettings();
+
+		this.hijackSearchCommands();
 
 		this.addCommand({
 			id: "toggle-rich-text",
@@ -100,6 +137,130 @@ export default class RichTextPlugin extends Plugin {
 		);
 	}
 
+	// Redirect Obsidian's built-in find / find-and-replace commands into our
+	// rich-text search bar. We patch the command objects (not the dispatch
+	// methods): when the overlay is focused Obsidian sees no active CodeMirror
+	// editor, so the built-in editor commands report themselves unavailable and
+	// never dispatch. Converting them to a checkCallback that reports available
+	// while rich-text mode is active lets every invocation path reach us —
+	// hotkeys, the command palette, the mobile toolbar "Find" and the context
+	// menu. When rich-text mode is off we defer to the original behaviour.
+	private hijackSearchCommands() {
+		this.patchSearchCommand(SEARCH_COMMAND_ID, false);
+		this.patchSearchCommand(SEARCH_REPLACE_COMMAND_ID, true);
+	}
+
+	// The view-header / tab menu's Find & Replace items call `showSearch()` on
+	// the MarkdownView's editor mode instead of running a command. Patch that
+	// method's prototype so it routes into our bar when rich-text mode is active.
+	// Done lazily from injectOverlay because the editor mode (and thus its
+	// prototype) only exists once a markdown view has been created.
+	private editorSearchPatched = false;
+	private patchEditorSearch(view: MarkdownView) {
+		if (this.editorSearchPatched) return;
+
+		const v = view as unknown as {
+			editMode?: EditorSearchMode;
+			currentMode?: EditorSearchMode;
+			modes?: { source?: EditorSearchMode };
+		};
+		const mode = v.editMode ?? v.modes?.source ?? v.currentMode;
+		if (!mode) return;
+
+		const proto = Object.getPrototypeOf(mode) as EditorSearchMode | null;
+		if (!proto || typeof proto.showSearch !== "function") return;
+
+		const plugin = this;
+		const original = proto.showSearch;
+		proto.showSearch = function (replace?: boolean) {
+			if (plugin.isRichTextActive()) {
+				plugin.openSearchBar(!!replace);
+				return;
+			}
+			return original.call(this, replace);
+		};
+		this.editorSearchPatched = true;
+		this.register(() => {
+			proto.showSearch = original;
+		});
+	}
+
+	private patchSearchCommand(id: string, replace: boolean) {
+		const registry = (
+			this.app as unknown as { commands?: CommandsRegistry }
+		).commands;
+		const cmd = registry?.commands?.[id] ?? registry?.editorCommands?.[id];
+		if (!cmd) return;
+
+		const original = {
+			callback: cmd.callback,
+			checkCallback: cmd.checkCallback,
+			editorCallback: cmd.editorCallback,
+			editorCheckCallback: cmd.editorCheckCallback,
+		};
+		const plugin = this;
+
+		cmd.checkCallback = function (checking: boolean): boolean {
+			if (plugin.isRichTextActive()) {
+				if (!checking) plugin.openSearchBar(replace);
+				return true;
+			}
+
+			// Not in rich-text mode — fall back to the command's original
+			// behaviour so the standard editor search still works.
+			const view = plugin.app.workspace.getActiveViewOfType(MarkdownView);
+			if (original.editorCheckCallback && view) {
+				const res = original.editorCheckCallback.call(
+					cmd,
+					checking,
+					view.editor,
+					view,
+				);
+				return checking ? (res ?? false) : true;
+			}
+			if (original.editorCallback && view) {
+				if (!checking) {
+					original.editorCallback.call(cmd, view.editor, view);
+				}
+				return true;
+			}
+			if (original.checkCallback) {
+				const res = original.checkCallback.call(cmd, checking);
+				return checking ? (res ?? false) : true;
+			}
+			if (original.callback) {
+				if (!checking) original.callback.call(cmd);
+				return true;
+			}
+			return false;
+		};
+
+		// checkCallback is overridden by the editor* callbacks, so drop those to
+		// make sure ours is the one Obsidian consults.
+		delete cmd.editorCheckCallback;
+		delete cmd.editorCallback;
+
+		this.register(() => {
+			cmd.callback = original.callback;
+			cmd.checkCallback = original.checkCallback;
+			cmd.editorCallback = original.editorCallback;
+			cmd.editorCheckCallback = original.editorCheckCallback;
+		});
+	}
+
+	private openSearchBar(replace: boolean) {
+		activeDocument.dispatchEvent(
+			new CustomEvent("plugin:open-search", { detail: { replace } }),
+		);
+	}
+
+	// True when the active markdown view is currently displaying the rich-text
+	// overlay (rather than the standard source / reading view).
+	private isRichTextActive(): boolean {
+		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+		return !!view && view.contentEl.classList.contains("is-rich-text-mode");
+	}
+
 	onunload() {
 		this.app.workspace.iterateAllLeaves((leaf) => {
 			// 1. Existing Cleanup: Remove overlays
@@ -159,6 +320,8 @@ export default class RichTextPlugin extends Plugin {
 	injectOverlay(leaf: WorkspaceLeaf) {
 		if (leaf.view.getViewType() !== "markdown") return;
 		if (!(leaf.view instanceof MarkdownView)) return;
+
+		this.patchEditorSearch(leaf.view);
 
 		let overlay = this.overlays.get(leaf);
 

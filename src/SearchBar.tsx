@@ -111,7 +111,15 @@ export function SearchBar() {
 	const [term, setTerm] = useState("");
 	const [replacement, setReplacement] = useState("");
 	const [showReplace, setShowReplace] = useState(false);
+	// On mobile the bar is pinned to the bottom, sitting directly above the
+	// formatting toolbar — this is the toolbar's measured height (px).
+	const [toolbarOffset, setToolbarOffset] = useState<number | null>(null);
+	// Whether the on-screen keyboard is up. When it's down we add the bottom
+	// safe-area inset so the bar clears the device/app bottom chrome; when it's
+	// up the toolbar is glued to the keyboard top and we sit flush against it.
+	const [keyboardUp, setKeyboardUp] = useState(false);
 
+	const barRef = useRef<HTMLDivElement>(null);
 	const searchInputRef = useRef<HTMLInputElement>(null);
 	const replaceInputRef = useRef<HTMLInputElement>(null);
 
@@ -121,7 +129,9 @@ export function SearchBar() {
 		const onOpen = (e: Event) => {
 			const wantsReplace = !!(e as CustomEvent<{ replace?: boolean }>)
 				.detail?.replace;
-			if (wantsReplace) setShowReplace(true);
+			// Set explicitly (not just on true) so "Find" opens find-only mode
+			// even if replace was previously shown.
+			setShowReplace(wantsReplace);
 			openSearch();
 		};
 		activeDocument.addEventListener("plugin:open-search", onOpen);
@@ -137,6 +147,80 @@ export function SearchBar() {
 		searchInputRef.current?.select();
 		if (term) setSearch(term);
 		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [isSearchOpen]);
+
+	// Escape closes the bar from anywhere inside the editor — including when
+	// focus is in the document (e.g. right after a replace) rather than in the
+	// search inputs. Scoped to this overlay so it doesn't hijack Escape globally.
+	useEffect(() => {
+		if (!isSearchOpen) return;
+		const container =
+			barRef.current?.closest(".rich-text-overlay") ??
+			barRef.current?.closest(".react-root") ??
+			null;
+		if (!container) return;
+		const onKeyDown = (e: KeyboardEvent) => {
+			if (e.key !== "Escape") return;
+			e.preventDefault();
+			e.stopPropagation();
+			setSearch("");
+			closeSearch();
+		};
+		container.addEventListener("keydown", onKeyDown, true);
+		return () =>
+			container.removeEventListener("keydown", onKeyDown, true);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [isSearchOpen]);
+
+	// On mobile, keep the bar sitting just above the formatting toolbar by
+	// tracking the toolbar's live height (it can grow to two rows). On desktop
+	// the bar is in-flow at the top, so no offset is needed.
+	useEffect(() => {
+		if (!isSearchOpen) {
+			setToolbarOffset(null);
+			return;
+		}
+		const bar = barRef.current;
+		const isMobile = !!bar?.closest(".rich-text-overlay.is-mobile");
+		if (!bar || !isMobile) {
+			setToolbarOffset(null);
+			return;
+		}
+		const toolbar = bar
+			.closest(".mdxeditor")
+			?.querySelector<HTMLElement>(".mdxeditor-toolbar");
+		if (!toolbar) return;
+		const measure = () =>
+			setToolbarOffset(toolbar.getBoundingClientRect().height);
+		measure();
+		const observer = new ResizeObserver(measure);
+		observer.observe(toolbar);
+		return () => observer.disconnect();
+	}, [isSearchOpen]);
+
+	// Decide when to add the bottom safe-area inset. Obsidian resizes the layout
+	// viewport when the keyboard opens (so visualViewport can't detect it), but
+	// the editor's :focus-within state is a reliable proxy: focus in the editor
+	// means the keyboard is up and the toolbar is glued to its top — sit flush.
+	// When focus leaves, the keyboard is down — add the inset to clear the
+	// device/app bottom chrome.
+	useEffect(() => {
+		if (!isSearchOpen) return;
+		const editorEl = barRef.current?.closest(".mdxeditor");
+		if (!editorEl) return;
+		const update = () => {
+			// Defer so :focus-within settles after focus moves between elements.
+			window.setTimeout(() => {
+				setKeyboardUp(editorEl.matches(":focus-within"));
+			}, 0);
+		};
+		update();
+		activeDocument.addEventListener("focusin", update);
+		activeDocument.addEventListener("focusout", update);
+		return () => {
+			activeDocument.removeEventListener("focusin", update);
+			activeDocument.removeEventListener("focusout", update);
+		};
 	}, [isSearchOpen]);
 
 	if (!isSearchOpen) return null;
@@ -197,8 +281,16 @@ export function SearchBar() {
 		if (!term || !currentRange) return;
 		const editor = getNearestEditorFromDOMNode(currentRange.startContainer);
 		if (!editor) return;
-		editor.update(() => spliceMatch(currentRange, str));
+		// Lexical reconciles its selection (and focuses the contenteditable)
+		// after the edit, stealing focus from the replace input. Pull it back —
+		// both right after the commit and on the next tick — so the user can keep
+		// pressing Enter to replace successive matches.
+		const restoreFocus = () => replaceInputRef.current?.focus();
+		editor.update(() => spliceMatch(currentRange, str), {
+			onUpdate: restoreFocus,
+		});
 		resetCursor();
+		window.setTimeout(restoreFocus, 0);
 	};
 
 	const replaceAllMatches = (str: string) => {
@@ -256,7 +348,20 @@ export function SearchBar() {
 
 	return (
 		<div
+			ref={barRef}
 			className="rich-text-search-bar"
+			style={
+				toolbarOffset != null
+					? {
+							// Sit flush above the toolbar. When the keyboard is
+							// down, add the bottom safe-area inset so the bar isn't
+							// swallowed by the device/app bottom chrome.
+							bottom: keyboardUp
+								? `${toolbarOffset}px`
+								: `calc(${toolbarOffset}px + env(safe-area-inset-bottom))`,
+						}
+					: undefined
+			}
 			// Don't let clicks inside the bar bubble out to the editor's
 			// mouse-down link handler / selection logic.
 			onMouseDownCapture={(e) => e.stopPropagation()}

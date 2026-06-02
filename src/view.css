@@ -363,9 +363,19 @@ blockquote {
 	cursor: not-allowed;
 }
 
-/* Mobile: roomier touch targets. */
+/* Mobile: pin the bar to the bottom, sitting directly above the formatting
+   toolbar (its `bottom` offset is set inline to the toolbar's measured height).
+   Roomier touch targets too. */
 .rich-text-overlay.is-mobile .rich-text-search-bar {
+	position: fixed;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	z-index: 55;
 	padding: 8px var(--spacing-3);
+	border-top: 1px solid var(--background-modifier-border);
+	border-bottom: none;
+	box-shadow: 0 -2px 16px rgba(0, 0, 0, 0.25);
 }
 
 .rich-text-overlay.is-mobile .rich-text-search-input,
