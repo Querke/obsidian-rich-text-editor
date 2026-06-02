@@ -1,5 +1,8 @@
 // ReactView.tsx
 import { oneDark } from "@codemirror/theme-one-dark";
+import { LanguageDescription } from "@codemirror/language";
+import { languages as codeLanguageData } from "@codemirror/language-data";
+import { csharp } from "@replit/codemirror-lang-csharp";
 import {
 	BlockTypeSelect,
 	BoldItalicUnderlineToggles,
@@ -93,6 +96,38 @@ export const CODE_BLOCK_LANGUAGES: Record<string, string> = {
 const CODE_BLOCK_LABEL_TO_ID = new Map(
 	Object.entries(CODE_BLOCK_LANGUAGES).map(([id, label]) => [label, id]),
 );
+
+// MDXEditor resolves a code block's syntax highlighting by matching the fence
+// language against @codemirror/language-data's `languages` array and calling
+// `.load()` on the match. C#'s built-in entry resolves to a legacy
+// `StreamLanguage` (clike) mode which, in this Obsidian/MDXEditor runtime,
+// renders with no highlighting at all (it emits zero token spans, while the
+// Lezer/LR grammars work fine). Replace that entry with a real Lezer C#
+// grammar so C# highlights like the other languages.
+//
+// This needs no MDXEditor changes: `@codemirror/language-data` is bundled once
+// and shared, so the array we mutate here is the very same instance the editor
+// reads when a code block mounts. Runs once at module load — before any editor
+// is rendered.
+let codeLanguagesPatched = false;
+function patchCodeLanguages() {
+	if (codeLanguagesPatched) return;
+	codeLanguagesPatched = true;
+	const replacement = LanguageDescription.of({
+		name: "C#",
+		alias: ["cs", "csharp", "c#"],
+		extensions: ["cs"],
+		support: csharp(),
+	});
+	const idx = codeLanguageData.findIndex((l) => l.name === "C#");
+	if (idx === -1) {
+		codeLanguageData.push(replacement);
+	} else {
+		codeLanguageData[idx] = replacement;
+	}
+}
+
+patchCodeLanguages();
 
 interface Props {
 	title: string;
