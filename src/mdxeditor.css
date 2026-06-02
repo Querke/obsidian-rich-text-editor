@@ -351,6 +351,13 @@ mark {
 	width: inherit;
 }
 
+/* Layout-transparent wrapper around BlockTypeSelect so its trigger stays a
+   direct flex child of the toolbar. The wrapper only exists to capture
+   pointerdown for the mobile caret-position fix. */
+.rte-blocktype-select {
+	display: contents;
+}
+
 ._toolbarRoot_1e2ox_162 div[role="separator"] {
 	margin: var(--spacing-2) var(--spacing-1);
 	border-left: 1px solid var(--baseBorder);

@@ -10,10 +10,50 @@ import {
 } from "obsidian";
 import { StrictMode } from "react";
 import { createRoot, Root } from "react-dom/client";
-import { RichTextEditor, RichTextEditorRef } from "./RichTextEditor";
+import {
+	CODE_BLOCK_LANGUAGES,
+	RichTextEditor,
+	RichTextEditorRef,
+} from "./RichTextEditor";
 import { mdxCalloutsToObsidian, obsidianCalloutsToMdx } from "./calloutPlugin";
 import { expandInlineFootnotes } from "./footnotePlugin";
 import { PropertyInfo } from "./PropertiesDisplay";
+import { isEmbeddedLang } from "./obsidianEmbedPlugin";
+
+// Obsidian/Prism accept code-fence language tokens (and aliases) that aren't
+// keys in CODE_BLOCK_LANGUAGES. MDXEditor's CodeMirror plugin throws on any
+// fence whose language it doesn't recognise, so obsidianToMdx remaps known
+// aliases onto our ids — e.g. ```c# -> ```cs, ```c++ -> ```cpp.
+const LANGUAGE_ALIASES: Record<string, string> = {
+	"c#": "cs",
+	csharp: "cs",
+	"c++": "cpp",
+	cplusplus: "cpp",
+	javascript: "js",
+	typescript: "ts",
+	python: "py",
+	python3: "py",
+	rs: "rust",
+	golang: "go",
+	rb: "ruby",
+	kt: "kotlin",
+	markdown: "md",
+};
+
+// Any fence whose language we can't resolve falls back to this id, so the block
+// still renders (just unhighlighted) instead of crashing the editor.
+const FALLBACK_CODE_LANGUAGE = "md";
+
+// Resolve a raw fence language token to an id MDXEditor's CodeMirror knows.
+function resolveCodeLang(rawToken: string): string {
+	const lang = rawToken.toLowerCase();
+	// Leave Obsidian embed fences (tasks/dataview/mermaid/…) untouched —
+	// obsidianEmbedPlugin claims those, not the CodeMirror plugin.
+	if (isEmbeddedLang(lang)) return rawToken;
+	if (lang in CODE_BLOCK_LANGUAGES) return lang;
+	if (lang in LANGUAGE_ALIASES) return LANGUAGE_ALIASES[lang];
+	return FALLBACK_CODE_LANGUAGE;
+}
 
 export class RichTextOverlay {
 	private root: Root | null = null;
@@ -377,11 +417,26 @@ export class RichTextOverlay {
 				}
 				continue;
 			}
-			const fenceOpen = line.match(/^\s*(`{3,}|~{3,})/);
+			const fenceOpen = line.match(/^(\s*)(`{3,}|~{3,})(.*)$/);
 			if (fenceOpen) {
 				inListBlock = false;
 				pendingBlankInList = false;
-				codeFence = fenceOpen[1];
+				const [, indent, marker, rest] = fenceOpen;
+				codeFence = marker;
+				// Remap the fence's language token onto an id the editor
+				// supports (e.g. c# -> cs), leaving any trailing info string
+				// (and embed fences like ```dataview) intact.
+				const info = rest.trimStart();
+				const space = info.search(/\s/);
+				const token = space === -1 ? info : info.slice(0, space);
+				if (token) {
+					const resolved = resolveCodeLang(token);
+					if (resolved !== token) {
+						const remainder =
+							space === -1 ? "" : info.slice(space);
+						line = indent + marker + resolved + remainder;
+					}
+				}
 				paragraphs.push(line);
 				continue;
 			}

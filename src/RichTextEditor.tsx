@@ -39,7 +39,14 @@ import {
 } from "react";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import { createPortal } from "react-dom";
-import { $getNearestNodeFromDOMNode } from "lexical";
+import {
+	$getNearestNodeFromDOMNode,
+	$getSelection,
+	$isRangeSelection,
+	$createRangeSelection,
+	$setSelection,
+	$getNodeByKey,
+} from "lexical";
 import type { LexicalEditor } from "lexical";
 import { $isListItemNode } from "@lexical/list";
 import { IndentControls } from "./IndentControls";
@@ -58,7 +65,7 @@ import {
 
 // Languages offered in the code-block language dropdown. Keyed by the fenced
 // code-block id; the value is the human-readable label shown in the dropdown.
-const CODE_BLOCK_LANGUAGES: Record<string, string> = {
+export const CODE_BLOCK_LANGUAGES: Record<string, string> = {
 	jsx: "JavaScript (react)",
 	js: "JavaScript",
 	css: "CSS",
@@ -109,6 +116,241 @@ export interface RichTextEditorRef {
 type LexicalContentEditable = HTMLElement & {
 	__lexicalEditor?: LexicalEditor;
 };
+
+// A serializable snapshot of a Lexical RangeSelection (node keys + offsets).
+type RangeSelectionSnapshot = {
+	anchorKey: string;
+	anchorOffset: number;
+	anchorType: "text" | "element";
+	focusKey: string;
+	focusOffset: number;
+	focusType: "text" | "element";
+};
+
+// Scrolls the caret down just enough to clear the on-screen keyboard when it's
+// hidden behind it. The visible bottom is computed from visualViewport (Obsidian
+// mobile doesn't always shrink window.innerHeight when the keyboard opens). Only
+// scrolls down — horizontal/vertical positioning otherwise stays as the user
+// left it.
+function scrollSelectionIntoView(host: HTMLElement) {
+	const scroller = host.querySelector<HTMLElement>(
+		".mdxeditor-root-contenteditable",
+	);
+	const editable = host.querySelector<HTMLElement>(
+		".mxeditor-content-editable",
+	);
+	if (!scroller || !editable) return;
+
+	const doc = host.ownerDocument;
+	const win = doc.defaultView ?? window;
+	const active = doc.activeElement as HTMLElement | null;
+	const focusInEditor =
+		!!active && (active === editable || editable.contains(active));
+	if (!focusInEditor) return;
+
+	const sel = win.getSelection();
+	if (!sel || sel.rangeCount === 0) return;
+
+	const range = sel.getRangeAt(0).cloneRange();
+	range.collapse(false);
+	let rect = range.getBoundingClientRect();
+	const focusNode = sel.focusNode;
+	const focusEl: Element | null =
+		focusNode?.nodeType === Node.ELEMENT_NODE
+			? (focusNode as Element)
+			: (focusNode?.parentElement ?? null);
+	if (rect.height === 0 && rect.width === 0 && focusEl) {
+		rect = focusEl.getBoundingClientRect();
+	}
+	if (rect.height === 0 && rect.width === 0) return;
+
+	const scrollerRect = scroller.getBoundingClientRect();
+	const viewport = win.visualViewport;
+	const viewportBottom = viewport
+		? viewport.offsetTop + viewport.height
+		: Number.POSITIVE_INFINITY;
+	const visibleBottom = Math.min(
+		scrollerRect.bottom,
+		viewportBottom,
+		win.innerHeight,
+	);
+	const margin = 32;
+	if (rect.bottom <= visibleBottom - margin) return;
+
+	scroller.scrollTop += rect.bottom - (visibleBottom - margin);
+}
+
+// Wraps MDXEditor's BlockTypeSelect to fix a mobile-only bug: picking a block
+// type from the dropdown moves the caret to the bottom of the document.
+//
+// MDXEditor converts the block with `$setBlocksType(...)` and then runs
+// `setTimeout(() => editor.focus())`. Lexical's `editor.focus()` falls back to
+// `root.selectEnd()` whenever the editor's selection is null. On mobile,
+// opening/closing the Radix dropdown clears the DOM selection, which nulls the
+// Lexical selection before that timer fires — so focus lands the caret at the
+// end of the document and scrolls there. On desktop the selection survives, so
+// the bug never shows.
+//
+// We watch the editor for the conversion update, capture the (still-correct)
+// post-conversion caret, and re-apply it with a `setTimeout(0)`. Because
+// MDXEditor scheduled its focus timer first (during the update callback, which
+// runs before our update listener), same-delay timers fire in order: its
+// focus/selectEnd runs first, then our restore corrects the caret.
+//
+// Restoring the caret also fixes a follow-on scroll bug: selectEnd is a
+// collapsed selection, so Lexical scrolls the viewport to the document end.
+// Our restored selection is a range (the user selected text first), and Lexical
+// skips scroll-into-view for non-collapsed selections — leaving the caret
+// scrolled off-screen. So after restoring, we explicitly scroll it back into
+// view across the keyboard-reopen animation window.
+function MobileSafeBlockTypeSelect(props: {
+	hostRef: { current: HTMLDivElement | null };
+}) {
+	const cleanupRef = useRef<(() => void) | null>(null);
+
+	const getLexicalEditor = (): LexicalEditor | null => {
+		const contentEditable =
+			props.hostRef.current?.querySelector<LexicalContentEditable>(
+				".mxeditor-content-editable",
+			) ?? null;
+		return contentEditable?.__lexicalEditor ?? null;
+	};
+
+	const snapshotSelection = (
+		editor: LexicalEditor,
+	): RangeSelectionSnapshot | null => {
+		let snap: RangeSelectionSnapshot | null = null;
+		editor.getEditorState().read(() => {
+			const selection = $getSelection();
+			if ($isRangeSelection(selection)) {
+				snap = {
+					anchorKey: selection.anchor.key,
+					anchorOffset: selection.anchor.offset,
+					anchorType: selection.anchor.type,
+					focusKey: selection.focus.key,
+					focusOffset: selection.focus.offset,
+					focusType: selection.focus.type,
+				};
+			}
+		});
+		return snap;
+	};
+
+	const restoreSelection = (
+		editor: LexicalEditor,
+		snap: RangeSelectionSnapshot,
+		savedScrollTop: number | null,
+	) => {
+		editor.update(() => {
+			if (!$getNodeByKey(snap.anchorKey) || !$getNodeByKey(snap.focusKey)) {
+				return;
+			}
+			const selection = $createRangeSelection();
+			selection.anchor.set(snap.anchorKey, snap.anchorOffset, snap.anchorType);
+			selection.focus.set(snap.focusKey, snap.focusOffset, snap.focusType);
+			$setSelection(selection);
+		});
+		// Selection is now set, so focus() keeps it instead of selecting the end.
+		editor.focus();
+
+		const host = props.hostRef.current;
+		if (!host) {
+			return;
+		}
+
+		// MDXEditor's selectEnd scrolled the viewport to the document end. Put
+		// the scroll position back exactly where the user left it, then only
+		// nudge if the caret ended up hidden behind the keyboard. The first pass
+		// runs in the same task as MDXEditor's focus, so there's no flash; later
+		// passes settle as the keyboard reopens and visualViewport updates.
+		const scroller = host.querySelector<HTMLElement>(
+			".mdxeditor-root-contenteditable",
+		);
+		const settle = () => {
+			if (scroller && savedScrollTop !== null) {
+				scroller.scrollTop = savedScrollTop;
+			}
+			scrollSelectionIntoView(host);
+		};
+		settle();
+		window.requestAnimationFrame(settle);
+		window.setTimeout(settle, 120);
+		window.setTimeout(settle, 350);
+	};
+
+	const handlePointerDownCapture = () => {
+		// Only matters on mobile, where the DOM selection is cleared by the
+		// dropdown. Running it on desktop would be a harmless no-op, but gate it
+		// to avoid touching desktop behavior at all.
+		const isMobile = !!props.hostRef.current?.closest(
+			".rich-text-overlay.is-mobile",
+		);
+		if (!isMobile) {
+			return;
+		}
+
+		const editor = getLexicalEditor();
+		if (!editor) {
+			return;
+		}
+
+		// A fresh interaction supersedes any pending one.
+		cleanupRef.current?.();
+
+		// Remember the exact scroll position so we can put it back: MDXEditor's
+		// selectEnd otherwise scrolls the viewport to the document end, and we'd
+		// rather keep the document exactly where the user left it.
+		const scroller = props.hostRef.current?.querySelector<HTMLElement>(
+			".mdxeditor-root-contenteditable",
+		);
+		const savedScrollTop = scroller?.scrollTop ?? null;
+
+		let safetyTimer = 0;
+		const unregister = editor.registerUpdateListener(
+			({ dirtyElements, dirtyLeaves }) => {
+				// Selection-only updates (e.g. the blur that nulls the selection
+				// when the dropdown opens) touch no nodes — skip them. The block
+				// conversion mutates element/leaf nodes, so it lands here.
+				if (dirtyElements.size === 0 && dirtyLeaves.size === 0) {
+					return;
+				}
+				const snap = snapshotSelection(editor);
+				cleanupRef.current?.();
+				if (snap) {
+					// Runs after MDXEditor's own focus timer (scheduled first).
+					window.setTimeout(
+						() => restoreSelection(editor, snap, savedScrollTop),
+						0,
+					);
+				}
+			},
+		);
+
+		const cleanup = () => {
+			unregister();
+			if (safetyTimer !== 0) {
+				window.clearTimeout(safetyTimer);
+				safetyTimer = 0;
+			}
+			cleanupRef.current = null;
+		};
+		cleanupRef.current = cleanup;
+
+		// If the dropdown is dismissed without a choice, stop listening.
+		safetyTimer = window.setTimeout(cleanup, 4000);
+	};
+
+	useEffect(() => () => cleanupRef.current?.(), []);
+
+	return (
+		<span
+			className="rte-blocktype-select"
+			onPointerDownCapture={handlePointerDownCapture}
+		>
+			<BlockTypeSelect />
+		</span>
+	);
+}
 
 export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 	(props, ref) => {
@@ -681,57 +923,8 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 				attributeFilter: ["tabindex"],
 			});
 
-			// Keep the caret visible above the on-screen keyboard. Obsidian
-			// mobile may not update visualViewport when the keyboard opens, so
-			// we compute the visible bottom as the smallest of: the scroller's
-			// own bottom, visualViewport bottom, and window.innerHeight.
-			const findScroller = (): HTMLElement | null =>
-				host.querySelector<HTMLElement>(
-					".mdxeditor-root-contenteditable",
-				);
-			const ensureCaretVisible = () => {
-				const active =
-					activeDocument.activeElement as HTMLElement | null;
-				const focusInEditor =
-					!!active &&
-					(active === editable || editable.contains(active));
-				if (!focusInEditor) return;
-
-				const scroller = findScroller();
-				if (!scroller) return;
-
-				const sel = window.getSelection();
-				if (!sel || sel.rangeCount === 0) return;
-
-				const range = sel.getRangeAt(0).cloneRange();
-				range.collapse(false);
-				let rect = range.getBoundingClientRect();
-				const focusNode = sel.focusNode;
-				const focusEl: Element | null =
-					focusNode?.nodeType === Node.ELEMENT_NODE
-						? (focusNode as Element)
-						: (focusNode?.parentElement ?? null);
-				if (rect.height === 0 && rect.width === 0 && focusEl) {
-					rect = focusEl.getBoundingClientRect();
-				}
-				if (rect.height === 0 && rect.width === 0) return;
-
-				const scrollerRect = scroller.getBoundingClientRect();
-				const viewport = window.visualViewport;
-				const viewportBottom = viewport
-					? viewport.offsetTop + viewport.height
-					: Number.POSITIVE_INFINITY;
-				const visibleBottom = Math.min(
-					scrollerRect.bottom,
-					viewportBottom,
-					window.innerHeight,
-				);
-				const margin = 32;
-				if (rect.bottom <= visibleBottom - margin) return;
-
-				const delta = rect.bottom - (visibleBottom - margin);
-				scroller.scrollTop += delta;
-			};
+			// Keep the caret visible above the on-screen keyboard.
+			const ensureCaretVisible = () => scrollSelectionIntoView(host);
 			let selectionCheckQueued = false;
 			const onSelectionChange = () => {
 				if (selectionCheckQueued) return;
@@ -1016,7 +1209,9 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 									<IndentControls
 										editorRef={editorRef.current}
 									/>
-									<BlockTypeSelect />
+									<MobileSafeBlockTypeSelect
+										hostRef={hostRef}
+									/>
 
 									<StrikeThroughSupSubToggles />
 									<HighlightToggle />
