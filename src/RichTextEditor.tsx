@@ -23,6 +23,7 @@ import {
 	MDXEditor,
 	MDXEditorMethods,
 	quotePlugin,
+	searchPlugin,
 	StrikeThroughSupSubToggles,
 	tablePlugin,
 	thematicBreakPlugin,
@@ -48,6 +49,7 @@ import { footnotePlugin, InsertFootnote } from "./footnotePlugin";
 import { autoLinkTitlePlugin } from "./autoLinkTitlePlugin";
 import { PropertiesDisplay, PropertyInfo } from "./PropertiesDisplay";
 import { InsertWikilink } from "./wikilinkButton";
+import { searchBarPlugin } from "./SearchBar";
 import {
 	EmbedRenderer,
 	obsidianEmbedPlugin,
@@ -1074,6 +1076,8 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 							codeMirrorExtensions: isDark ? [oneDark] : [],
 						}),
 						obsidianEmbedPlugin(),
+						searchPlugin(),
+						searchBarPlugin(),
 					]}
 				/>
 				{propertiesContainer &&

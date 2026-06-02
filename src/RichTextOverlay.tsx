@@ -136,6 +136,29 @@ export class RichTextOverlay {
 			);
 		});
 
+		this.scope.register(["Mod"], "f", (evt) => {
+			evt.preventDefault();
+			activeDocument.dispatchEvent(new CustomEvent("plugin:open-search"));
+			// Returning false stops the event from bubbling to Obsidian's app
+			// scope, which would otherwise run editor:open-search on the hidden
+			// markdown editor behind our view.
+			return false;
+		});
+
+		// Ctrl/Cmd+H opens the bar straight into replace mode. Must be handled
+		// here too — otherwise it falls through to Obsidian's
+		// editor:open-search-replace command, which opens a dialog on the hidden
+		// editor and then swallows subsequent hotkeys (e.g. Ctrl+F).
+		this.scope.register(["Mod"], "h", (evt) => {
+			evt.preventDefault();
+			activeDocument.dispatchEvent(
+				new CustomEvent("plugin:open-search", {
+					detail: { replace: true },
+				}),
+			);
+			return false;
+		});
+
 		this.mount();
 	}
 

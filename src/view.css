@@ -274,3 +274,105 @@ blockquote {
 	padding-left: 12px;
 }
 
+/* ---------------------------------------------------------------------------- */
+/* Find & replace                                                                */
+/* ---------------------------------------------------------------------------- */
+
+/* Match highlights painted by MDXEditor's searchPlugin via the CSS Custom
+   Highlight API. Without these rules the matches are invisible. */
+::highlight(MdxSearch) {
+	background-color: var(--text-highlight-bg);
+	color: var(--text-normal);
+}
+
+::highlight(MdxFocusSearch) {
+	background-color: var(--text-accent);
+	color: var(--text-on-accent);
+}
+
+/* A full-width bar pinned to the top of the editor: below the formatting
+   toolbar on desktop, at the very top on mobile (where the toolbar is moved to
+   the bottom for the keyboard). Rendered in normal flow so nothing overlaps it
+   and it spans the entire content width. */
+.rich-text-search-bar {
+	flex: 0 0 auto;
+	display: flex;
+	flex-direction: row;
+	/* Keep the replace-toggle vertically centred against the stacked inputs. */
+	align-items: center;
+	gap: 6px;
+	padding: 8px 12px;
+	background-color: var(--background-secondary);
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+/* Two-column grid to the right of the toggle button: column 1 (1fr) holds the
+   inputs so they're always equal width, column 2 (auto) holds each row's
+   buttons. The shared grid rows keep the inputs and their buttons aligned. */
+.rich-text-search-fields {
+	flex: 1 1 auto;
+	min-width: 0;
+	display: grid;
+	grid-template-columns: 1fr auto;
+	align-items: center;
+	gap: 6px 8px;
+}
+
+/* Per-row button cluster sitting in the grid's second column. */
+.rich-text-search-actions {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+
+.rich-text-search-input {
+	width: 100%;
+	min-width: 0;
+	height: 30px;
+}
+
+.rich-text-search-count {
+	flex: 0 0 auto;
+	min-width: 64px;
+	text-align: center;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	font-variant-numeric: tabular-nums;
+}
+
+.rich-text-search-bar .clickable-icon {
+	flex: 0 0 auto;
+	padding: 4px;
+	color: var(--text-muted);
+}
+
+.rich-text-search-bar .clickable-icon.is-active {
+	color: var(--text-normal);
+	background-color: var(--background-modifier-hover);
+}
+
+.rich-text-search-btn {
+	flex: 0 0 auto;
+	height: 30px;
+	padding: 0 10px;
+	white-space: nowrap;
+}
+
+.rich-text-search-bar button:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+}
+
+/* Mobile: roomier touch targets. */
+.rich-text-overlay.is-mobile .rich-text-search-bar {
+	padding: 8px var(--spacing-3);
+}
+
+.rich-text-overlay.is-mobile .rich-text-search-input,
+.rich-text-overlay.is-mobile .rich-text-search-btn {
+	height: 36px;
+}
+
+.rich-text-overlay.is-mobile .rich-text-search-bar .clickable-icon {
+	padding: 8px;
+}
