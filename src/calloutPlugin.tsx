@@ -840,10 +840,40 @@ export function InsertCallout() {
 				editor?.update(() => {
 					const node = $createCalloutNode(type || "note");
 					node.append($createCalloutTitleNode());
-					const paragraph = $createParagraphNode();
-					node.append(paragraph);
-					$insertNodeToNearestRoot(node);
-					paragraph.select();
+
+					// If text is selected, move the selected top-level blocks
+					// into the callout as its body so the selection becomes
+					// the callout's content (formatting and structure
+					// preserved). Otherwise insert an empty callout with a
+					// single placeholder paragraph.
+					const selection = $getSelection();
+					const blocks: LexicalNode[] = [];
+					if (
+						$isRangeSelection(selection) &&
+						!selection.isCollapsed()
+					) {
+						const seen = new Set<string>();
+						for (const n of selection.getNodes()) {
+							const top = n.getTopLevelElement();
+							if (top && !seen.has(top.getKey())) {
+								seen.add(top.getKey());
+								blocks.push(top);
+							}
+						}
+					}
+
+					if (blocks.length > 0) {
+						blocks[0].insertBefore(node);
+						for (const block of blocks) {
+							node.append(block);
+						}
+						node.selectEnd();
+					} else {
+						const paragraph = $createParagraphNode();
+						node.append(paragraph);
+						$insertNodeToNearestRoot(node);
+						paragraph.select();
+					}
 				});
 			}}
 		>
