@@ -62,6 +62,28 @@ function resolveCodeLang(rawToken: string): string {
 	return FALLBACK_CODE_LANGUAGE;
 }
 
+// Raw HTML (`<div>`, `<table>`, `<!-- … -->`, …) becomes an `html` mdast node,
+// which MDXEditor has no import visitor for (HTML processing is suppressed) — so
+// it throws mid-import and truncates the whole document. We backslash-escape the
+// leading `<` of anything tag-like so it parses as ordinary text and renders
+// literally instead. `mdxToObsidian` strips the backslash again on save.
+//
+// Deliberately NOT escaped: autolinks like <https://…> (tag name followed by
+// ":"), `<` not starting a tag (`a < b`, `<3`), and anything inside inline-code
+// spans. Fenced code blocks are skipped by the caller (it only runs this on
+// non-code lines).
+const HTML_TAG_OPEN =
+	/<(?=\/?[A-Za-z][A-Za-z0-9-]*(?:[\s/>]|$)|!|\?)/g;
+function escapeHtmlAngles(line: string): string {
+	// Split on inline-code spans (odd indices) and leave those untouched.
+	return line
+		.split(/(`+[^`]*`+)/)
+		.map((segment, i) =>
+			i % 2 === 1 ? segment : segment.replace(HTML_TAG_OPEN, "\\<"),
+		)
+		.join("");
+}
+
 export class RichTextOverlay {
 	private root: Root | null = null;
 	private container: HTMLElement;
@@ -222,6 +244,11 @@ export class RichTextOverlay {
 			.replace(/&#x20;/g, " ")
 			.replace(/&#x9;/g, "\t")
 			.replace(/\r\n/g, "\n");
+
+		// Undo the HTML-angle escaping applied in obsidianToMdx (and any `\<`
+		// the markdown serializer adds for a `<` in text), so raw HTML is
+		// written back to disk exactly as the user authored it.
+		output = output.replace(/\\</g, "<");
 
 		// Callouts: convert `:::callout` directives back to `> [!type]` syntax
 		// before the newline-collapsing below touches the block structure.
@@ -447,6 +474,10 @@ export class RichTextOverlay {
 				paragraphs.push(line);
 				continue;
 			}
+
+			// Raw HTML on this (non-code, non-fence) line: escape tag-opening
+			// "<" so it renders as literal text rather than crashing the import.
+			line = escapeHtmlAngles(line);
 
 			// B. Convert Structural Indentation
 			const leadingWhitespace = line.match(/^\s*/)?.[0] || "";
