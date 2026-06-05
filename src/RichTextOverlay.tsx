@@ -40,9 +40,16 @@ const LANGUAGE_ALIASES: Record<string, string> = {
 	markdown: "md",
 };
 
-// Any fence whose language we can't resolve falls back to this id, so the block
-// still renders (just unhighlighted) instead of crashing the editor.
-const FALLBACK_CODE_LANGUAGE = "md";
+// Any fence whose language we can't resolve falls back to this id. The empty
+// string is MDXEditor's "no language" / plain-text code block (registered in
+// CODE_BLOCK_LANGUAGES). Using it means an unsupported language renders as a
+// plain, uncoloured code block instead of crashing the import or being
+// mislabelled with markdown highlighting.
+//
+// Trade-off: the original (unsupported) language token is dropped from the
+// fence — on save it becomes a bare ``` block. That matches what the user
+// sees (plain text); the previous "md" fallback also changed the token.
+const FALLBACK_CODE_LANGUAGE = "";
 
 // Resolve a raw fence language token to an id MDXEditor's CodeMirror knows.
 function resolveCodeLang(rawToken: string): string {

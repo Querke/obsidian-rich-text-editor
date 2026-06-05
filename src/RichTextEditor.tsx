@@ -69,6 +69,15 @@ import {
 // Languages offered in the code-block language dropdown. Keyed by the fenced
 // code-block id; the value is the human-readable label shown in the dropdown.
 export const CODE_BLOCK_LANGUAGES: Record<string, string> = {
+	// Empty string = a fence with no language. Registering it is REQUIRED:
+	// MDXEditor's code-block import visitor only claims a fenced block if some
+	// editor descriptor matches its language, and the CodeMirror descriptor
+	// matches via `Object.hasOwn(codeBlockLanguages, lang ?? "")`. Without a ""
+	// key, a no-language ``` block (lang = null) matches nothing, the mdast node
+	// goes unhandled, and MDXEditor throws mid-import — truncating the whole
+	// document from that block onward. With it registered, the block renders as
+	// plain text (CodeMirror loads no grammar for an empty language id).
+	"": "Plain Text",
 	jsx: "JavaScript (react)",
 	js: "JavaScript",
 	css: "CSS",
@@ -1271,7 +1280,16 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 						quotePlugin(),
 						// directivesPlugin supplies the directive Markdown
 						// grammar; calloutPlugin supplies the callout node.
-						directivesPlugin({ directiveDescriptors: [] }),
+						// `escapeUnknownTextDirectives` turns stray `:word` text
+						// (which remark-directive parses as a text directive) back
+						// into plain text instead of throwing "No descriptor
+						// found" mid-import, which would truncate the document.
+						// Callouts are container directives (`:::`) and are
+						// unaffected.
+						directivesPlugin({
+							directiveDescriptors: [],
+							escapeUnknownTextDirectives: true,
+						}),
 						calloutPlugin(),
 						footnotePlugin(),
 						autoLinkTitlePlugin(),
