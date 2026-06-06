@@ -36,20 +36,30 @@ import {
 	$getSelection,
 	$isParagraphNode,
 	$isRangeSelection,
-	$nodesOfType,
 	COMMAND_PRIORITY_HIGH,
 	DecoratorNode,
 	ElementNode,
 	KEY_BACKSPACE_COMMAND,
 } from "lexical";
 import type {
+	Klass,
 	LexicalEditor,
 	LexicalNode,
 	SerializedElementNode,
 	SerializedLexicalNode,
 	Spread,
 } from "lexical";
-import { $insertNodeToNearestRoot } from "@lexical/utils";
+import { $dfs, $insertNodeToNearestRoot } from "@lexical/utils";
+
+// Non-deprecated replacement for Lexical's deprecated `$nodesOfType`: walk the
+// current editor state depth-first and collect every node that is an instance
+// of `klass`. (The Obsidian plugin reviewer rejects suppressing
+// `@typescript-eslint/no-deprecated`, so we avoid the deprecated API entirely.)
+function $nodesOfClass<T extends LexicalNode>(klass: Klass<T>): T[] {
+	return $dfs()
+		.map(({ node }) => node)
+		.filter((node): node is T => node instanceof klass);
+}
 import {
 	addExportVisitor$,
 	addImportVisitor$,
@@ -792,8 +802,7 @@ export const calloutPlugin = realmPlugin({
 			queueMicrotask(() => {
 				editor.update(
 					() => {
-						// eslint-disable-next-line @typescript-eslint/no-deprecated -- one-shot scan inside an update; a mutation listener would change the heal-on-import architecture.
-						for (const callout of $nodesOfType(CalloutNode)) {
+						for (const callout of $nodesOfClass(CalloutNode)) {
 							healCallout(callout);
 						}
 					},

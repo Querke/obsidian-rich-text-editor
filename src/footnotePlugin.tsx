@@ -30,13 +30,13 @@ import {
 	$isElementNode,
 	$isParagraphNode,
 	$isRangeSelection,
-	$nodesOfType,
 	COMMAND_PRIORITY_HIGH,
 	DecoratorNode,
 	ElementNode,
 	KEY_BACKSPACE_COMMAND,
 } from "lexical";
 import type {
+	Klass,
 	LexicalEditor,
 	LexicalNode,
 	NodeKey,
@@ -44,7 +44,18 @@ import type {
 	SerializedLexicalNode,
 	Spread,
 } from "lexical";
-import { $insertNodeToNearestRoot } from "@lexical/utils";
+import { $dfs, $insertNodeToNearestRoot } from "@lexical/utils";
+
+// Non-deprecated replacement for Lexical's deprecated `$nodesOfType`: walk the
+// current editor state depth-first and collect every node that is an instance
+// of `klass`. Used for the one-shot import scans below. (The Obsidian plugin
+// reviewer rejects suppressing `@typescript-eslint/no-deprecated`, so we avoid
+// the deprecated API entirely.)
+function $nodesOfClass<T extends LexicalNode>(klass: Klass<T>): T[] {
+	return $dfs()
+		.map(({ node }) => node)
+		.filter((node): node is T => node instanceof klass);
+}
 import {
 	addExportVisitor$,
 	addImportVisitor$,
@@ -586,8 +597,7 @@ function handleFootnoteBackspace(event: KeyboardEvent | null): boolean {
 		}
 		event?.preventDefault();
 		const identifier = parent.getIdentifier();
-		// eslint-disable-next-line @typescript-eslint/no-deprecated -- one-shot scan inside an update; a mutation listener would change the control flow here.
-		for (const ref of $nodesOfType(FootnoteReferenceNode)) {
+		for (const ref of $nodesOfClass(FootnoteReferenceNode)) {
 			if (ref.getIdentifier() === identifier) {
 				ref.remove();
 			}
@@ -655,8 +665,9 @@ export const footnotePlugin = realmPlugin({
 			queueMicrotask(() => {
 				editor.update(
 					() => {
-						// eslint-disable-next-line @typescript-eslint/no-deprecated -- one-shot heal-on-import scan; a mutation listener would change this architecture.
-						for (const def of $nodesOfType(FootnoteDefinitionNode)) {
+						for (const def of $nodesOfClass(
+							FootnoteDefinitionNode,
+						)) {
 							healDefinition(def);
 						}
 						ensureTrailingParagraph();
@@ -702,12 +713,10 @@ export function InsertFootnote() {
 			// Generate an identifier that doesn't collide with anything that
 			// already exists in the document.
 			const taken = new Set<string>();
-			// eslint-disable-next-line @typescript-eslint/no-deprecated -- one-shot scan to collect existing identifiers before inserting a new footnote.
-			for (const def of $nodesOfType(FootnoteDefinitionNode)) {
+			for (const def of $nodesOfClass(FootnoteDefinitionNode)) {
 				taken.add(def.getIdentifier());
 			}
-			// eslint-disable-next-line @typescript-eslint/no-deprecated -- one-shot scan to collect existing identifiers before inserting a new footnote.
-			for (const ref of $nodesOfType(FootnoteReferenceNode)) {
+			for (const ref of $nodesOfClass(FootnoteReferenceNode)) {
 				taken.add(ref.getIdentifier());
 			}
 			const id = nextNumericIdentifier(taken);

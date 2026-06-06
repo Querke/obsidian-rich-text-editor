@@ -170,11 +170,18 @@ export default class RichTextPlugin extends Plugin {
 		const proto = Object.getPrototypeOf(mode) as EditorSearchMode | null;
 		if (!proto || typeof proto.showSearch !== "function") return;
 
-		const plugin = this;
 		const original = proto.showSearch;
+		// Arrow closures over the plugin `this`, so the replacement keeps its
+		// own runtime `this` (the editor mode) for `original.call(this, …)`
+		// without aliasing `this` to a local variable. (Arrows are used rather
+		// than `.bind`, which returns `any` here since strictBindCallApply is
+		// off.)
+		const isRichTextActive = () => this.isRichTextActive();
+		const openSearchBar = (replace?: boolean) =>
+			this.openSearchBar(!!replace);
 		proto.showSearch = function (replace?: boolean) {
-			if (plugin.isRichTextActive()) {
-				plugin.openSearchBar(!!replace);
+			if (isRichTextActive()) {
+				openSearchBar(replace);
 				return;
 			}
 			return original.call(this, replace);
@@ -198,17 +205,18 @@ export default class RichTextPlugin extends Plugin {
 			editorCallback: cmd.editorCallback,
 			editorCheckCallback: cmd.editorCheckCallback,
 		};
-		const plugin = this;
-
-		cmd.checkCallback = function (checking: boolean): boolean {
-			if (plugin.isRichTextActive()) {
-				if (!checking) plugin.openSearchBar(replace);
+		// Arrow function so it closes over the plugin `this` (no `this` alias);
+		// the original callbacks are invoked with `.call(cmd, …)` explicitly, so
+		// this replacement never needs its own runtime `this`.
+		cmd.checkCallback = (checking: boolean): boolean => {
+			if (this.isRichTextActive()) {
+				if (!checking) this.openSearchBar(replace);
 				return true;
 			}
 
 			// Not in rich-text mode — fall back to the command's original
 			// behaviour so the standard editor search still works.
-			const view = plugin.app.workspace.getActiveViewOfType(MarkdownView);
+			const view = this.app.workspace.getActiveViewOfType(MarkdownView);
 			if (original.editorCheckCallback && view) {
 				// `.call` is typed `any` here (strictBindCallApply is off), so
 				// annotate the result to keep the return type sound.
