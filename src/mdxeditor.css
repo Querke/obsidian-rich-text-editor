@@ -40,8 +40,20 @@
 	align-items: flex-start;
 	position: relative;
 
+	/* Gap between the checkbox and the text/caret. Lives on the list item (not
+	   the text span) so empty items keep the same offset as ones with text. */
+	padding-inline-start: calc(var(--spacing-6) + 6px);
+
 	/* DISABLE clicks on the container itself to prevent "Row Focus" behavior */
 	pointer-events: none;
+}
+
+/* A list item that only wraps a nested list also carries the
+   _listItemUnchecked_ class, so MDXEditor's bundled rule paints a stray
+   checkbox on it next to the nested list's real first item. Suppress it. */
+.mdxeditor-root-contenteditable li[class*="_nestedListItem_"]::before,
+.mdxeditor-root-contenteditable li[class*="_nestedListItem_"]::after {
+	display: none;
 }
 
 /* 2. Checkbox: Re-enable clicks solely for the checkbox icon */
@@ -68,8 +80,6 @@
 	/* Fix z-index to ensure it sits above the list item background */
 	position: relative;
 	z-index: 1;
-
-	margin-left: 6px;
 }
 
 /* 4. Visuals: Remove the focus ring entirely */
