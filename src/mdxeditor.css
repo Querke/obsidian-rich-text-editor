@@ -161,6 +161,21 @@ div[class*="linkDialogPopoverContent"] {
 	box-sizing: border-box;
 }
 
+/* On mobile the link popover is anchored (by Radix Popper) to the selected
+   text, which the on-screen keyboard then covers. Override the popper's inline
+   transform to dock it to the top-centre of the viewport instead — matching the
+   image dialog. `!important` beats the (non-important) inline transform. Scoped
+   with :has so only the link popover moves, not the table/column menus that
+   share .mdxeditor-popup-container. */
+.is-mobile
+	[data-radix-popper-content-wrapper]:has(
+		[class*="linkDialogPopoverContent"]
+	) {
+	top: 62px !important;
+	left: 50% !important;
+	transform: translateX(-50%) !important;
+}
+
 /* 2. Ensure the form inside fills that width */
 form[class*="multiFieldForm"] {
 	width: 100%;
@@ -2408,6 +2423,77 @@ form._multiFieldForm_1e2ox_1214 ._formField_1e2ox_1220 label {
 
 .mxeditor-content-editable .footnote-backref:hover {
 	color: var(--text-accent);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Table math formula chips (tableMathPlugin).                            */
+/* A cell holding `SUM^` etc. renders as a link-styled chip showing the   */
+/* computed value; clicking it opens the edit popup below.                */
+/* ---------------------------------------------------------------------- */
+.table-formula-host {
+	display: inline;
+}
+
+.table-formula {
+	color: var(--text-accent);
+	text-decoration: underline dotted;
+	text-underline-offset: 2px;
+	cursor: pointer;
+	font-variant-numeric: tabular-nums;
+	-webkit-user-select: none;
+	user-select: none;
+}
+
+.table-formula:hover {
+	text-decoration: underline;
+}
+
+/* Full-viewport catcher that closes the popup on an outside click. */
+.table-formula-backdrop {
+	position: fixed;
+	inset: 0;
+	z-index: 60;
+}
+
+.table-formula-popup {
+	position: fixed;
+	z-index: 61;
+	display: flex;
+	align-items: center;
+	gap: var(--size-4-2);
+	padding: var(--size-4-2);
+	max-width: min(400px, calc(100vw - 16px));
+	box-sizing: border-box;
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m);
+	box-shadow: var(--shadow-s);
+}
+
+.table-formula-input {
+	font-family: var(--font-monospace);
+	font-size: var(--font-ui-small);
+	padding: var(--size-2-1) var(--size-2-2);
+	width: 9em;
+}
+
+.table-formula-btn {
+	cursor: pointer;
+	padding: var(--size-2-1) var(--size-4-2);
+	font-size: var(--font-ui-small);
+	line-height: 1.4;
+	border: none;
+	border-radius: var(--radius-s);
+	background-color: #1e1e1e;
+	color: #ffffff;
+}
+
+.table-formula-btn:hover {
+	background-color: #2c2c2c;
+}
+
+.table-formula-btn.is-danger {
+	color: var(--text-error);
 }
 
 /* ---------------------------------------------------------------------- */

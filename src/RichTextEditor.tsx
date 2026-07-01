@@ -57,6 +57,7 @@ import { IndentControls } from "./IndentControls";
 import { tagLinkPlugin } from "./tagLinkPlugin";
 import { calloutPlugin, InsertCallout } from "./calloutPlugin";
 import { footnotePlugin, InsertFootnote } from "./footnotePlugin";
+import { InsertTableFormula, tableMathPlugin } from "./tableMathPlugin";
 import { autoLinkTitlePlugin } from "./autoLinkTitlePlugin";
 import { PropertiesDisplay, PropertyInfo } from "./PropertiesDisplay";
 import { InsertWikilink } from "./wikilinkButton";
@@ -1291,6 +1292,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 									/>
 									<InsertImage />
 									<InsertTable />
+									<InsertTableFormula />
 									<InsertCallout />
 									<InsertFootnote />
 								</>
@@ -1317,6 +1319,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 						thematicBreakPlugin(),
 						markdownShortcutPlugin(),
 						tablePlugin(),
+						tableMathPlugin(),
 						imagePlugin({
 							disableImageResize: true,
 
