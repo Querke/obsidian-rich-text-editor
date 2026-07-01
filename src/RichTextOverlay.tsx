@@ -762,6 +762,12 @@ export class RichTextOverlay {
 								false,
 							);
 						}}
+						onResolveLink={(linkpath) =>
+							this.view.app.metadataCache.getFirstLinkpathDest(
+								linkpath,
+								this.view.file?.path || "",
+							) !== null
+						}
 					/>
 				</StrictMode>,
 			);

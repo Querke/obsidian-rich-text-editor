@@ -147,6 +147,8 @@ interface Props {
 	onImageUpload: (image: File) => Promise<string>;
 	onResolveImage: (src: string) => string;
 	onNavigate: (path: string) => void;
+	// Returns true if a note/file with this linkpath exists in the vault.
+	onResolveLink: (linkpath: string) => boolean;
 	onPickInternalLink: () => Promise<string | null>;
 	onRenderEmbed?: EmbedRenderer;
 }
@@ -1122,30 +1124,35 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 
 			// Lexical's link plugin auto-prefixes scheme-less hrefs with
 			// "https://", so a wikilink to "My Note" ends up as
-			// "https://My%20Note". Two cases to detect:
-			//   1. Non-aliased: stripped href matches the rendered text.
-			//   2. Aliased ([Alias](My Note)): text is the alias, so it
-			//      won't match — instead, check that the "hostname" portion
-			//      contains no dot. Real domains always have a TLD; vault
-			//      basenames almost never do.
+			// "https://My%20Note". A genuine scheme-less URL the user typed
+			// (e.g. "www.google.com") gets the same treatment, so we can't
+			// tell them apart by "stripped href matches the rendered text".
+			// Look at the "hostname" portion:
+			//   - No dot => a vault basename (real domains always have a TLD).
+			//     Treat as internal even if the note doesn't exist yet, so
+			//     clicking a brand-new [[Note]] still creates it.
+			//   - Has a dot => ambiguous between a real domain and a note whose
+			//     name contains a dot (e.g. "readme.md"). Resolve against the
+			//     vault: if such a note exists, navigate internally; otherwise
+			//     fall through to the browser.
 			const wasAutoPrefixed = /^https?:\/\//i.test(href);
-			const strippedHref = (() => {
-				try {
-					return decodeURI(href.replace(/^https?:\/\//i, ""));
-				} catch {
-					return href.replace(/^https?:\/\//i, "");
-				}
-			})();
-			if (text.length > 0 && strippedHref === text) {
-				props.onNavigate(text);
-				return;
-			}
 			if (wasAutoPrefixed) {
+				const strippedHref = (() => {
+					try {
+						return decodeURI(href.replace(/^https?:\/\//i, ""));
+					} catch {
+						return href.replace(/^https?:\/\//i, "");
+					}
+				})();
 				const hostPart = strippedHref
 					.split("/")[0]
 					.split("#")[0]
 					.split("?")[0];
-				if (hostPart.length > 0 && !hostPart.includes(".")) {
+				if (
+					hostPart.length > 0 &&
+					(!hostPart.includes(".") ||
+						props.onResolveLink(strippedHref))
+				) {
 					props.onNavigate(strippedHref);
 					return;
 				}
