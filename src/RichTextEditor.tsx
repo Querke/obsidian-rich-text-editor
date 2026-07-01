@@ -49,6 +49,7 @@ import {
 	$createRangeSelection,
 	$setSelection,
 	$getNodeByKey,
+	CLEAR_HISTORY_COMMAND,
 } from "lexical";
 import type { LexicalEditor } from "lexical";
 import { $isListItemNode } from "@lexical/list";
@@ -426,6 +427,19 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 				// jump mid-typing. Only push when the text actually changed.
 				if (editorRef.current?.getMarkdown() === markdown) return;
 				editorRef.current?.setMarkdown(markdown);
+
+				// setMarkdown rebuilds the whole Lexical tree, but the history
+				// plugin keeps its prior undo stack — whose entries point at the
+				// *previous* document's editor states. Without clearing it,
+				// switching notes (same reused editor instance) leaves note A's
+				// states in the stack, so undoing past note B's own edits
+				// restores note A's content over note B. Wipe the history so
+				// undo can't cross the document swap.
+				const lexicalEditor =
+					hostRef.current?.querySelector<LexicalContentEditable>(
+						".mxeditor-content-editable",
+					)?.__lexicalEditor;
+				lexicalEditor?.dispatchCommand(CLEAR_HISTORY_COMMAND, undefined);
 			},
 			setProperties: (props: PropertyInfo[]) => {
 				setProperties(props);
