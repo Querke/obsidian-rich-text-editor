@@ -705,7 +705,10 @@ export class RichTextOverlay {
 				);
 				return true;
 			} catch (e) {
-				new Notice("Rename failed: " + e);
+				new Notice(
+					"Rename failed: " +
+						(e instanceof Error ? e.message : String(e)),
+				);
 				return false;
 			}
 		};

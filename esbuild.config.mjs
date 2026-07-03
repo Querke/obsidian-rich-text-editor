@@ -69,6 +69,10 @@ const context = await esbuild.context({
 	],
 	format: "cjs",
 	target: "es2018",
+	// Use production React even in dev builds: the dev variant's render
+	// instrumentation (logComponentRender, createTask, runWithFiberInDEV)
+	// dominates performance profiles and hides the plugin's real costs.
+	define: { "process.env.NODE_ENV": '"production"' },
 	logLevel: "info",
 	sourcemap: prod ? false : "inline",
 	treeShaking: true,

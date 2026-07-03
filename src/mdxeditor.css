@@ -224,6 +224,14 @@ div[class*="_dialogContent_"] input {
 	border-radius: 6px;
 }
 
+/* Read-only stand-in for a not-yet-mounted CodeMirror editor (see
+   LazyCodeBlockEditor). It hosts a real .cm-editor, so the usual CodeMirror
+   rules apply; this only anchors the language flair. */
+.mdxeditor .rte-lazy-code-block {
+	position: relative;
+	cursor: text;
+}
+
 /** Diff viewer */
 
 .mdxeditor .cm-mergeView .cm-scroller,
@@ -753,7 +761,8 @@ mark {
 /* Non-interactive language flair, shown in the corner of every code block
    (mirrors Obsidian's `code-block-flair`). The `data-code-lang` attribute is
    set in RichTextEditor.tsx from the block's selected language. */
-[class*="_codeMirrorWrapper_"][data-code-lang]::before {
+[class*="_codeMirrorWrapper_"][data-code-lang]::before,
+.rte-lazy-code-block[data-code-lang]::before {
 	content: attr(data-code-lang);
 	position: absolute;
 	top: 0;

@@ -1,13 +1,24 @@
 // ReactView.tsx
 import { oneDark } from "@codemirror/theme-one-dark";
-import { LanguageDescription } from "@codemirror/language";
+import {
+	defaultHighlightStyle,
+	foldGutter,
+	LanguageDescription,
+	syntaxHighlighting,
+} from "@codemirror/language";
 import { languages as codeLanguageData } from "@codemirror/language-data";
+import { EditorState, type Extension } from "@codemirror/state";
+import { EditorView, lineNumbers } from "@codemirror/view";
+import { basicLight } from "cm6-theme-basic-light";
 import { csharp } from "@replit/codemirror-lang-csharp";
 import {
 	BlockTypeSelect,
 	BoldItalicUnderlineToggles,
 	codeBlockPlugin,
+	CodeBlockEditorDescriptor,
+	CodeBlockEditorProps,
 	codeMirrorPlugin,
+	CodeMirrorEditor,
 	CodeToggle,
 	CreateLink,
 	directivesPlugin,
@@ -107,6 +118,118 @@ export const CODE_BLOCK_LANGUAGES: Record<string, string> = {
 const CODE_BLOCK_LABEL_TO_ID = new Map(
 	Object.entries(CODE_BLOCK_LANGUAGES).map(([id, label]) => [label, id]),
 );
+
+// Mounting MDXEditor's full CodeMirror editor per code block dominates load
+// time on documents with many blocks: its basicSetup pulls in keymaps,
+// history, autocompletion, search, and update listeners for every instance.
+// Until the user clicks into a block (or keyboard-navigates into it, which
+// fires the focusEmitter), show a read-only CodeMirror view instead — same
+// themes, gutters, and language grammar, so it looks identical, but with none
+// of the editing machinery.
+function LazyCodeBlockEditor(props: CodeBlockEditorProps) {
+	// Empty blocks are freshly inserted ones — mount eagerly so typing works
+	// right away (the insert's focus event fires before we could subscribe).
+	const [active, setActive] = useState(props.code === "");
+	const wrapperRef = useRef<HTMLDivElement>(null);
+
+	useEffect(() => {
+		props.focusEmitter.subscribe(() => setActive(true));
+	}, [props.focusEmitter]);
+
+	// The real editor builds its EditorView asynchronously (it awaits the
+	// language grammar), so poll a few frames for the content element.
+	useEffect(() => {
+		if (!active) return;
+		let tries = 0;
+		const tryFocus = () => {
+			const content =
+				wrapperRef.current?.querySelector<HTMLElement>(".cm-content");
+			if (content) {
+				content.focus();
+			} else if (++tries < 20) {
+				requestAnimationFrame(tryFocus);
+			}
+		};
+		requestAnimationFrame(tryFocus);
+	}, [active]);
+
+	useEffect(() => {
+		if (active) return;
+		const el = wrapperRef.current;
+		if (!el) return;
+		let view: EditorView | null = null;
+		let cancelled = false;
+		void (async () => {
+			// Mirror the extension order of MDXEditor's CodeMirrorEditor
+			// (codeMirrorExtensions first, then basicLight) so themes resolve
+			// with the same precedence and the swap on click is seamless.
+			const extensions: Extension[] = [
+				...(activeDocument.body.classList.contains("theme-dark")
+					? [oneDark]
+					: []),
+				basicLight,
+				lineNumbers(),
+				foldGutter(),
+				syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+				EditorView.lineWrapping,
+				EditorView.editable.of(false),
+				EditorState.readOnly.of(true),
+			];
+			if (props.language !== "") {
+				const languageData = codeLanguageData.find(
+					(l) =>
+						l.name === props.language ||
+						l.alias.includes(props.language) ||
+						l.extensions.includes(props.language),
+				);
+				if (languageData) {
+					try {
+						extensions.push(
+							(await languageData.load()).extension,
+						);
+					} catch {
+						// Grammar failed to load; render as plain text.
+					}
+				}
+			}
+			if (cancelled) return;
+			view = new EditorView({
+				parent: el,
+				state: EditorState.create({ doc: props.code, extensions }),
+			});
+		})();
+		return () => {
+			cancelled = true;
+			view?.destroy();
+		};
+	}, [active, props.code, props.language]);
+
+	if (active) {
+		return (
+			<div ref={wrapperRef} style={{ display: "contents" }}>
+				<CodeMirrorEditor {...props} />
+			</div>
+		);
+	}
+
+	return (
+		<div
+			ref={wrapperRef}
+			className="rte-lazy-code-block"
+			data-code-lang={props.language || undefined}
+			onClick={() => setActive(true)}
+		/>
+	);
+}
+
+const lazyCodeBlockDescriptor: CodeBlockEditorDescriptor = {
+	// codeMirrorPlugin registers its descriptor at priority 1; win the match.
+	priority: 2,
+	// Same match as the CodeMirror descriptor, so exactly the blocks it would
+	// claim get the lazy treatment.
+	match: (language) => (language ?? "") in CODE_BLOCK_LANGUAGES,
+	Editor: LazyCodeBlockEditor,
+};
 
 // MDXEditor resolves a code block's syntax highlighting by matching the fence
 // language against @codemirror/language-data's `languages` array and calling
@@ -1341,7 +1464,12 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 						linkPlugin(),
 						tagLinkPlugin(),
 						linkDialogPlugin({ showLinkTitleField: false }),
-						codeBlockPlugin({ defaultCodeBlockLanguage: "js" }),
+						codeBlockPlugin({
+							defaultCodeBlockLanguage: "js",
+							codeBlockEditorDescriptors: [
+								lazyCodeBlockDescriptor,
+							],
+						}),
 						codeMirrorPlugin({
 							codeBlockLanguages: CODE_BLOCK_LANGUAGES,
 
