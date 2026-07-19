@@ -73,6 +73,7 @@ import { autoLinkTitlePlugin } from "./autoLinkTitlePlugin";
 import { PropertiesDisplay, PropertyInfo } from "./PropertiesDisplay";
 import { InsertWikilink } from "./wikilinkButton";
 import { searchBarPlugin } from "./SearchBar";
+import { TextColorPicker } from "./TextColorPicker";
 import {
 	EmbedRenderer,
 	obsidianEmbedPlugin,
@@ -1398,6 +1399,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 									<IndentControls
 										editorRef={editorRef.current}
 									/>
+									<TextColorPicker />
 									<MobileSafeBlockTypeSelect
 										hostRef={hostRef}
 									/>
