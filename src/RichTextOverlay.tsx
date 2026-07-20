@@ -632,6 +632,28 @@ export class RichTextOverlay {
 		}
 	}
 
+	// Canonical comparison key for external-change detection. Our own save can
+	// drift from what lands on disk in ways that aren't real content changes:
+	// invisible whitespace (a blank line round-trips through the `&#x20;`
+	// spacer to a space-only line, trailing spaces, the `\n{2,}` halving) and
+	// ordered-list renumbering (MDXEditor renders a list as `1.`/`2.` but disk
+	// may still hold the original `10.`/`11.`). Running the body through
+	// `obsidianToMdx` collapses the whitespace drift, and flattening every
+	// ordered-list marker to a constant collapses the renumbering, so equal
+	// keys mean "our own write, ignore" while a genuine external edit differs.
+	private canonicalKey(fullText: string): string {
+		try {
+			const { raw, body } = this.extractFrontmatter(fullText);
+			const mdx = this.obsidianToMdx(body).replace(
+				/^(\s*)\d+\./gm,
+				"$1#.",
+			);
+			return raw + "\x00" + mdx;
+		} catch {
+			return fullText;
+		}
+	}
+
 	private refreshFromDisk() {
 		if (this.root === null || !this.editorRef) return;
 		const file = this.view.file;
@@ -652,6 +674,32 @@ export class RichTextOverlay {
 			// `editor.getValue()` already equals `freshText` — skipping on
 			// that match would silently swallow legitimate external edits.
 			if (this.recentWrites.includes(freshText)) return;
+
+			// Bytes differ but the meaningful content might not: compare the
+			// canonical (post-conversion) form against everything we've written
+			// so invisible-whitespace drift from our own save isn't mistaken
+			// for an external edit (which would reload the doc, clear undo
+			// history, and snap the caret to the top).
+			const freshKey = this.canonicalKey(freshText);
+			const knownKeys = [this.lastSyncedFullText, ...this.recentWrites];
+			if (knownKeys.some((t) => this.canonicalKey(t) === freshKey)) {
+				// TEMP diagnostic — remove once confirmed. JSON.stringify makes
+				// the invisible whitespace difference visible in the console.
+				console.debug(
+					"[RTE] resync skipped — whitespace-only drift, not external",
+					{
+						disk: JSON.stringify(freshText),
+						lastSynced: JSON.stringify(this.lastSyncedFullText),
+					},
+				);
+				return;
+			}
+
+			// TEMP diagnostic — remove once confirmed.
+			console.debug("[RTE] resync RELOAD — genuine external change", {
+				disk: JSON.stringify(freshText),
+				lastSynced: JSON.stringify(this.lastSyncedFullText),
+			});
 			this.applyExternalText(freshText);
 		});
 	}
