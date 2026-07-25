@@ -12,6 +12,7 @@ import { EditorView, lineNumbers } from "@codemirror/view";
 import { basicLight } from "cm6-theme-basic-light";
 import { csharp } from "@replit/codemirror-lang-csharp";
 import {
+	$createCodeBlockNode,
 	BlockTypeSelect,
 	BoldItalicUnderlineToggles,
 	codeBlockPlugin,
@@ -71,7 +72,7 @@ import { calloutPlugin, InsertCallout } from "./calloutPlugin";
 import { footnotePlugin, InsertFootnote } from "./footnotePlugin";
 import { InsertTableFormula, tableMathPlugin } from "./tableMathPlugin";
 import { autoLinkTitlePlugin } from "./autoLinkTitlePlugin";
-import { codeBlockShortcutPlugin } from "./codeBlockShortcutPlugin";
+import { blockShortcutPlugin } from "./blockShortcutPlugin";
 import { PropertiesDisplay, PropertyInfo } from "./PropertiesDisplay";
 import { InsertWikilink } from "./wikilinkButton";
 import {
@@ -83,6 +84,7 @@ import { editorDockPlugin } from "./editorDock";
 import { linkDialogBarPlugin } from "./linkDialogBar";
 import {
 	EmbedRenderer,
+	isEmbeddedLang,
 	obsidianEmbedPlugin,
 	setEditorEmbedRenderer,
 } from "./obsidianEmbedPlugin";
@@ -122,8 +124,11 @@ export const CODE_BLOCK_LANGUAGES: Record<string, string> = {
 	lua: "Lua",
 };
 
-// Aliases accepted when typing a ``` fence, mapped onto the ids above.
-const TYPED_CODE_LANGUAGE_ALIASES: Record<string, string> = {
+// Obsidian/Prism accept code-fence language tokens (and aliases) that aren't
+// keys in CODE_BLOCK_LANGUAGES. MDXEditor's CodeMirror plugin throws on any
+// fence whose language it doesn't recognise, so both the import path and the
+// ```lang typing shortcut remap known aliases onto our ids.
+const LANGUAGE_ALIASES: Record<string, string> = {
 	"c#": "cs",
 	csharp: "cs",
 	"c++": "cpp",
@@ -138,6 +143,20 @@ const TYPED_CODE_LANGUAGE_ALIASES: Record<string, string> = {
 	kt: "kotlin",
 	markdown: "md",
 };
+
+// Resolve a raw fence language token to an id MDXEditor's CodeMirror knows.
+// Anything unresolvable falls back to "" — MDXEditor's plain-text code block —
+// so an unsupported language renders uncoloured instead of crashing the import.
+// Trade-off: the original token is dropped, so on save it becomes a bare ```.
+export function resolveCodeLang(rawToken: string): string {
+	const lang = rawToken.toLowerCase();
+	// Leave Obsidian embed fences (tasks/dataview/mermaid/…) untouched —
+	// obsidianEmbedPlugin claims those, not the CodeMirror plugin.
+	if (isEmbeddedLang(lang)) return rawToken;
+	if (lang in CODE_BLOCK_LANGUAGES) return lang;
+	if (lang in LANGUAGE_ALIASES) return LANGUAGE_ALIASES[lang];
+	return "";
+}
 
 // Reverse lookup (display label -> code-block id) used to render the flair.
 const CODE_BLOCK_LABEL_TO_ID = new Map(
@@ -1551,17 +1570,18 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 
 							codeMirrorExtensions: isDark ? [oneDark] : [],
 						}),
-						codeBlockShortcutPlugin({
-							resolveLanguage: (language) => {
-								const normalized = language.toLowerCase();
-								if (normalized in CODE_BLOCK_LANGUAGES) {
-									return normalized;
-								}
-								return (
-									TYPED_CODE_LANGUAGE_ALIASES[normalized] ??
-									null
-								);
-							},
+						blockShortcutPlugin({
+							// Embed languages (mermaid/dataview/…) render as
+							// read-only nodes, so a freshly typed one would be
+							// uneditable — give those a plain block to type in.
+							createCodeBlock: (language) =>
+								$createCodeBlockNode({
+									code: "",
+									language: isEmbeddedLang(language)
+										? ""
+										: resolveCodeLang(language),
+									meta: "",
+								}),
 						}),
 						listUnbulletPlugin(),
 						obsidianEmbedPlugin(),

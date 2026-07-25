@@ -12,57 +12,15 @@ import {
 import { StrictMode } from "react";
 import { createRoot, Root } from "react-dom/client";
 import {
-	CODE_BLOCK_LANGUAGES,
+	resolveCodeLang,
 	RichTextEditor,
 	RichTextEditorRef,
 } from "./RichTextEditor";
 import { mdxCalloutsToObsidian, obsidianCalloutsToMdx } from "./calloutPlugin";
 import { expandInlineFootnotes } from "./footnotePlugin";
 import { PropertyInfo } from "./PropertiesDisplay";
-import { isEmbeddedLang } from "./obsidianEmbedPlugin";
 import type { WikilinkSuggestion } from "./wikilinkShortcutPlugin";
 
-// Obsidian/Prism accept code-fence language tokens (and aliases) that aren't
-// keys in CODE_BLOCK_LANGUAGES. MDXEditor's CodeMirror plugin throws on any
-// fence whose language it doesn't recognise, so obsidianToMdx remaps known
-// aliases onto our ids — e.g. ```c# -> ```cs, ```c++ -> ```cpp.
-const LANGUAGE_ALIASES: Record<string, string> = {
-	"c#": "cs",
-	csharp: "cs",
-	"c++": "cpp",
-	cplusplus: "cpp",
-	javascript: "js",
-	typescript: "ts",
-	python: "py",
-	python3: "py",
-	rs: "rust",
-	golang: "go",
-	rb: "ruby",
-	kt: "kotlin",
-	markdown: "md",
-};
-
-// Any fence whose language we can't resolve falls back to this id. The empty
-// string is MDXEditor's "no language" / plain-text code block (registered in
-// CODE_BLOCK_LANGUAGES). Using it means an unsupported language renders as a
-// plain, uncoloured code block instead of crashing the import or being
-// mislabelled with markdown highlighting.
-//
-// Trade-off: the original (unsupported) language token is dropped from the
-// fence — on save it becomes a bare ``` block. That matches what the user
-// sees (plain text); the previous "md" fallback also changed the token.
-const FALLBACK_CODE_LANGUAGE = "";
-
-// Resolve a raw fence language token to an id MDXEditor's CodeMirror knows.
-function resolveCodeLang(rawToken: string): string {
-	const lang = rawToken.toLowerCase();
-	// Leave Obsidian embed fences (tasks/dataview/mermaid/…) untouched —
-	// obsidianEmbedPlugin claims those, not the CodeMirror plugin.
-	if (isEmbeddedLang(lang)) return rawToken;
-	if (lang in CODE_BLOCK_LANGUAGES) return lang;
-	if (lang in LANGUAGE_ALIASES) return LANGUAGE_ALIASES[lang];
-	return FALLBACK_CODE_LANGUAGE;
-}
 
 // HTML processing is ENABLED on the editor (suppressHtmlProcessing={false}), so
 // MDXEditor's mdxJsx parser claims every tag-like `<`. That is what lets `<u>`,
