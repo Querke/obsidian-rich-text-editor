@@ -20,15 +20,13 @@ remove fixed entries, add new ones with the same reasoning format.
   combined underline+strikethrough text and the dotted underline on table
   formulas. Single-keyword usages (`underline`, `none`, `line-through`) are not
   flagged, only the multi-value ones.
-- `!important` (`src/mdxeditor.css`, mobile link-popover positioning) —
-  overrides an inline `transform` style Radix sets at runtime; specificity
-  alone can't beat an inline style.
-- `:has()` (`src/mdxeditor.css`, same mobile link-popover rule) — scopes the
-  `!important` override to just the link popover, not other popups sharing
-  `.mdxeditor-popup-container`.
-
-These four are documented inline in `src/mdxeditor.css` with the same
+These two are documented inline in `src/mdxeditor.css` with the same
 reasoning. Don't "fix" them by deleting the declarations.
+
+Previously listed, now gone: the `!important` + `:has()` pair that repositioned
+the mobile link popover. The link dialog is no longer a floating popover — it
+renders as a docked bar (`src/linkDialogBar.tsx` + `src/editorDock.tsx`), so
+there is no inline Radix `transform` left to override.
 
 ## Dependency vulnerabilities
 

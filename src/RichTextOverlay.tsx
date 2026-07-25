@@ -873,9 +873,9 @@ export class RichTextOverlay {
 			this.view.scope = this.scope;
 		} else {
 			this.view.scope = this.parentScope;
-			// MDXEditor popovers (link dialog, table column editor, etc.)
-			// portal into document.body, so hiding our overlay container
-			// doesn't remove them. Dismiss them explicitly here.
+			// MDXEditor popovers (the table column editor, etc.) portal into
+			// document.body, so hiding our overlay container doesn't remove
+			// them. Dismiss them explicitly here.
 			this.dismissPopovers();
 		}
 	}
@@ -883,7 +883,7 @@ export class RichTextOverlay {
 	private dismissPopovers() {
 		const doc = this.container.ownerDocument ?? activeDocument;
 		doc.querySelectorAll<HTMLElement>(
-			'[class*="linkDialogPopover"], [class*="tableColumnEditorPopover"]',
+			'[class*="tableColumnEditorPopover"]',
 		).forEach((el) => el.remove());
 	}
 

@@ -7,7 +7,8 @@
 // next/prev/replace/replaceAll. It does NOT ship any UI — this file is that UI.
 //
 // The bar is injected as an MDXEditor top-area child (see `searchBarPlugin`
-// below) so it lives inside the editor's realm and `useEditorSearch` works.
+// below) so it lives inside the editor's realm and `useEditorSearch` works, and
+// renders into the shared bar dock (see editorDock.tsx) for its placement.
 // It is opened by the `plugin:open-search` event that RichTextOverlay fires on
 // Ctrl/Cmd+F (find) and Ctrl/Cmd+H (replace).
 //
@@ -28,6 +29,7 @@ import {
 	$isTextNode,
 	getNearestEditorFromDOMNode,
 } from "lexical";
+import { DockedBar } from "./editorDock";
 
 const ChevronUp = () => (
 	<svg
@@ -111,13 +113,6 @@ export function SearchBar() {
 	const [term, setTerm] = useState("");
 	const [replacement, setReplacement] = useState("");
 	const [showReplace, setShowReplace] = useState(false);
-	// On mobile the bar is pinned to the bottom, sitting directly above the
-	// formatting toolbar — this is the toolbar's measured height (px).
-	const [toolbarOffset, setToolbarOffset] = useState<number | null>(null);
-	// Whether the on-screen keyboard is up. When it's down we add the bottom
-	// safe-area inset so the bar clears the device/app bottom chrome; when it's
-	// up the toolbar is glued to the keyboard top and we sit flush against it.
-	const [keyboardUp, setKeyboardUp] = useState(false);
 
 	const barRef = useRef<HTMLDivElement>(null);
 	const searchInputRef = useRef<HTMLInputElement>(null);
@@ -168,57 +163,6 @@ export function SearchBar() {
 		container.addEventListener("keydown", onKeyDown, true);
 		return () =>
 			container.removeEventListener("keydown", onKeyDown, true);
-	}, [isSearchOpen]);
-
-	// On mobile, keep the bar sitting just above the formatting toolbar by
-	// tracking the toolbar's live height (it can grow to two rows). On desktop
-	// the bar is in-flow at the top, so no offset is needed.
-	useEffect(() => {
-		if (!isSearchOpen) {
-			setToolbarOffset(null);
-			return;
-		}
-		const bar = barRef.current;
-		const isMobile = !!bar?.closest(".rich-text-overlay.is-mobile");
-		if (!bar || !isMobile) {
-			setToolbarOffset(null);
-			return;
-		}
-		const toolbar = bar
-			.closest(".mdxeditor")
-			?.querySelector<HTMLElement>(".mdxeditor-toolbar");
-		if (!toolbar) return;
-		const measure = () =>
-			setToolbarOffset(toolbar.getBoundingClientRect().height);
-		measure();
-		const observer = new ResizeObserver(measure);
-		observer.observe(toolbar);
-		return () => observer.disconnect();
-	}, [isSearchOpen]);
-
-	// Decide when to add the bottom safe-area inset. Obsidian resizes the layout
-	// viewport when the keyboard opens (so visualViewport can't detect it), but
-	// the editor's :focus-within state is a reliable proxy: focus in the editor
-	// means the keyboard is up and the toolbar is glued to its top — sit flush.
-	// When focus leaves, the keyboard is down — add the inset to clear the
-	// device/app bottom chrome.
-	useEffect(() => {
-		if (!isSearchOpen) return;
-		const editorEl = barRef.current?.closest(".mdxeditor");
-		if (!editorEl) return;
-		const update = () => {
-			// Defer so :focus-within settles after focus moves between elements.
-			window.setTimeout(() => {
-				setKeyboardUp(editorEl.matches(":focus-within"));
-			}, 0);
-		};
-		update();
-		activeDocument.addEventListener("focusin", update);
-		activeDocument.addEventListener("focusout", update);
-		return () => {
-			activeDocument.removeEventListener("focusin", update);
-			activeDocument.removeEventListener("focusout", update);
-		};
 	}, [isSearchOpen]);
 
 	if (!isSearchOpen) return null;
@@ -345,29 +289,10 @@ export function SearchBar() {
 		total > 0 ? `${cursor || 1}/${total}` : term ? "0/0" : "";
 
 	return (
-		<div
-			ref={barRef}
-			className="rich-text-search-bar"
-			style={
-				toolbarOffset != null
-					? {
-							// Sit flush above the toolbar. When the keyboard is
-							// down, add the bottom safe-area inset so the bar isn't
-							// swallowed by the device/app bottom chrome.
-							bottom: keyboardUp
-								? `${toolbarOffset}px`
-								: `calc(${toolbarOffset}px + env(safe-area-inset-bottom))`,
-						}
-					: undefined
-			}
-			// Don't let clicks inside the bar bubble out to the editor's
-			// mouse-down link handler / selection logic.
-			onMouseDownCapture={(e) => e.stopPropagation()}
-		>
+		<DockedBar ref={barRef} className="rich-text-search-bar">
 			<button
 				className={
-					"clickable-icon rich-text-search-toggle" +
-					(showReplace ? " is-active" : "")
+					"clickable-icon" + (showReplace ? " is-active" : "")
 				}
 				aria-label={showReplace ? "Hide replace" : "Show replace"}
 				onClick={() => setShowReplace((v) => !v)}
@@ -375,17 +300,17 @@ export function SearchBar() {
 				<ReplaceIcon />
 			</button>
 
-			<div className="rich-text-search-fields">
+			<div className="rich-text-docked-fields">
 				<input
 					ref={searchInputRef}
-					className="rich-text-search-input"
+					className="rich-text-docked-input"
 					type="text"
 					placeholder="Find"
 					value={term}
 					onChange={(e) => onTermChange(e.target.value)}
 					onKeyDown={handleSearchKeyDown}
 				/>
-				<div className="rich-text-search-actions">
+				<div className="rich-text-docked-actions">
 					<span className="rich-text-search-count">{matchLabel}</span>
 					<button
 						className="clickable-icon"
@@ -416,23 +341,23 @@ export function SearchBar() {
 					<>
 						<input
 							ref={replaceInputRef}
-							className="rich-text-search-input"
+							className="rich-text-docked-input"
 							type="text"
 							placeholder="Replace"
 							value={replacement}
 							onChange={(e) => setReplacement(e.target.value)}
 							onKeyDown={handleReplaceKeyDown}
 						/>
-						<div className="rich-text-search-actions">
+						<div className="rich-text-docked-actions">
 							<button
-								className="rich-text-search-btn"
+								className="rich-text-docked-btn"
 								disabled={total === 0}
 								onClick={() => replaceCurrent(replacement)}
 							>
 								Replace
 							</button>
 							<button
-								className="rich-text-search-btn"
+								className="rich-text-docked-btn"
 								disabled={total === 0}
 								onClick={() => replaceAllMatches(replacement)}
 							>
@@ -442,14 +367,13 @@ export function SearchBar() {
 					</>
 				)}
 			</div>
-		</div>
+		</DockedBar>
 	);
 }
 
 // Injects the search bar into the editor's top area so it renders inside the
-// MDXEditor realm (required for `useEditorSearch`) and sits, in normal flow,
-// just below the formatting toolbar on desktop (and at the very top on mobile,
-// where the toolbar is moved to the bottom). Add alongside `searchPlugin()` in
+// MDXEditor realm (required for `useEditorSearch`); the bar itself portals into
+// the shared dock. Add alongside `searchPlugin()` and `editorDockPlugin()` in
 // the editor's plugin list.
 export const searchBarPlugin = realmPlugin({
 	init(realm) {

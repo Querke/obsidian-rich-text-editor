@@ -140,61 +140,10 @@ li[role="checkbox"]:focus-within {
 	pointer-events: auto;
 }
 
-div.rich-text-link-dialog-wrapper {
-	/* Override the broken 'translate(1245px...)' inline style */
-	transform: none;
-
-	/* Dock it to the top-center of the editor view */
-	position: absolute;
-	top: 62px; /* Adjust based on your toolbar height */
-	left: 50%;
-
-	/* Center align it horizontally */
-	translate: -50% 0%;
-
-	/* Ensure it sits above everything else */
-	z-index: 1000;
-
-	/* Optional: Add a little animation so it feels deliberate */
-	animation: slideDown 0.2s ease-out;
-}
-div[class*="linkDialogPopoverContent"] {
-	/* Set width to 400px, OR 90% of the screen if the screen is smaller */
-	width: min(400px, 90vw);
-	max-width: 90vw;
-
-	/* Ensure padding doesn't expand width */
-	box-sizing: border-box;
-}
-
-/* On mobile the link popover is anchored (by Radix Popper) to the selected
-   text, which the on-screen keyboard then covers. Override the popper's inline
-   transform to dock it to the top-centre of the viewport instead — matching the
-   image dialog. `!important` beats the (non-important) inline transform. Scoped
-   with :has so only the link popover moves, not the table/column menus that
-   share .mdxeditor-popup-container. Desktop keeps the popover anchored at the
-   link; the container z-index puts it below the context menu. */
-.is-mobile
-	[data-radix-popper-content-wrapper]:has(
-		[class*="linkDialogPopoverContent"]
-	) {
-	top: 62px !important;
-	left: 50% !important;
-	transform: translateX(-50%) !important;
-}
-
-/* 2. Ensure the form inside fills that width */
+/* Ensure the form inside fills the dialog width */
 form[class*="multiFieldForm"] {
 	width: 100%;
 	max-width: 100%;
-}
-
-/* 3. Force Inputs to shrink (Override size="40") */
-div[class*="linkDialogPopoverContent"] input {
-	width: 100%; /* Fill the container */
-	max-width: 100%; /* Never exceed container */
-	min-width: 0; /* Allow shrinking below default browser input size */
-	box-sizing: border-box;
 }
 
 div[class*="_dialogContent_"] {

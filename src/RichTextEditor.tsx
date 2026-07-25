@@ -79,6 +79,8 @@ import {
 	wikilinkShortcutPlugin,
 } from "./wikilinkShortcutPlugin";
 import { searchBarPlugin } from "./SearchBar";
+import { editorDockPlugin } from "./editorDock";
+import { linkDialogBarPlugin } from "./linkDialogBar";
 import {
 	EmbedRenderer,
 	obsidianEmbedPlugin,
@@ -1319,13 +1321,14 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 			return { kind: "external", href };
 		};
 
-		const openLink = (e: ReactMouseEvent, where: "current" | "tab") => {
-			const anchor = (e.target as HTMLElement).closest("a");
-			if (!anchor) return;
+		// Also handed to the link bar's "Go to" button, so opening a link from
+		// there routes identically to clicking the anchor in the document.
+		const openLinkTarget = (
+			anchor: HTMLAnchorElement,
+			where: "current" | "tab",
+		) => {
 			const link = resolveLinkTarget(anchor);
 			if (!link) return;
-			e.preventDefault();
-			e.stopPropagation();
 
 			if (link.kind === "internal") {
 				props.onNavigate(link.path, where);
@@ -1339,6 +1342,14 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 			} else {
 				window.open(link.href, "_blank", "noopener,noreferrer");
 			}
+		};
+
+		const openLink = (e: ReactMouseEvent, where: "current" | "tab") => {
+			const anchor = (e.target as HTMLElement).closest("a");
+			if (!anchor) return;
+			e.preventDefault();
+			e.stopPropagation();
+			openLinkTarget(anchor, where);
 		};
 
 		const handleEditorContextMenu = (e: ReactMouseEvent) => {
@@ -1427,7 +1438,13 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 						}
 						return;
 					}
-					if (e.button === 0) openLink(e, "current");
+					// Click opens the link; Ctrl/Cmd+click opens it in a new
+					// tab. The link bar is reached by putting the caret next
+					// to the link instead (arrow keys, or clicking just off
+					// the anchor).
+					if (e.button === 0) {
+						openLink(e, e.ctrlKey || e.metaKey ? "tab" : "current");
+					}
 				}}
 				onAuxClickCapture={(e) => {
 					if (e.button === 1) openLink(e, "tab");
@@ -1518,7 +1535,11 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 							getSuggestions: props.getInternalLinkSuggestions,
 						}),
 						tagLinkPlugin(),
-						linkDialogPlugin({ showLinkTitleField: false }),
+						// The link dialog is rendered as a docked bar, so
+						// MDXEditor's floating popover is switched off with an
+						// empty component — only its state/actions are used.
+						linkDialogPlugin({ LinkDialog: () => <></> }),
+						linkDialogBarPlugin({ onOpenLink: openLinkTarget }),
 						codeBlockPlugin({
 							defaultCodeBlockLanguage: "js",
 							codeBlockEditorDescriptors: [
@@ -1546,6 +1567,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 						obsidianEmbedPlugin(),
 						searchPlugin(),
 						searchBarPlugin(),
+						editorDockPlugin(),
 					]}
 				/>
 				{propertiesContainer &&
