@@ -4,6 +4,7 @@ import {
 	FuzzySuggestModal,
 	MarkdownRenderer,
 	MarkdownView,
+	Menu,
 	Notice,
 	Scope,
 	TFile,
@@ -19,6 +20,7 @@ import { mdxCalloutsToObsidian, obsidianCalloutsToMdx } from "./calloutPlugin";
 import { expandInlineFootnotes } from "./footnotePlugin";
 import { PropertyInfo } from "./PropertiesDisplay";
 import { isEmbeddedLang } from "./obsidianEmbedPlugin";
+import type { WikilinkSuggestion } from "./wikilinkShortcutPlugin";
 
 // Obsidian/Prism accept code-fence language tokens (and aliases) that aren't
 // keys in CODE_BLOCK_LANGUAGES. MDXEditor's CodeMirror plugin throws on any
@@ -62,25 +64,60 @@ function resolveCodeLang(rawToken: string): string {
 	return FALLBACK_CODE_LANGUAGE;
 }
 
-// Raw HTML (`<div>`, `<table>`, `<!-- … -->`, …) becomes an `html` mdast node,
-// which MDXEditor has no import visitor for (HTML processing is suppressed) — so
-// it throws mid-import and truncates the whole document. We backslash-escape the
-// leading `<` of anything tag-like so it parses as ordinary text and renders
-// literally instead. `mdxToObsidian` strips the backslash again on save.
+// HTML processing is ENABLED on the editor (suppressHtmlProcessing={false}), so
+// MDXEditor's mdxJsx parser claims every tag-like `<`. That is what lets `<u>`,
+// `<sub>`, `<sup>` and `<span style="…">` (how text colour survives) render for
+// real. But anything the JSX parser can't resolve (`<div>`, `<!-- … -->`,
+// `<https://…>` autolinks, unknown or unbalanced tags) throws mid-import and
+// truncates the whole document. So we backslash-escape the leading `<` of
+// everything tag-like except tags that are both whitelisted AND properly paired
+// on the same line, which stay literal and render. Same-line pairing is the
+// safety net: a lone `<u>` whose `</u>` is further down the note degrades to
+// literal text instead of blowing up the import. `mdxToObsidian` strips the
+// backslash again on save.
 //
-// Deliberately NOT escaped: autolinks like <https://…> (tag name followed by
-// ":"), `<` not starting a tag (`a < b`, `<3`), and anything inside inline-code
-// spans. Fenced code blocks are skipped by the caller (it only runs this on
-// non-code lines).
+// Deliberately NOT escaped: `<` not starting a tag (`a < b`, `<3`) and anything
+// inside inline-code spans. Fenced code blocks are skipped by the caller (it only
+// runs this on non-code lines).
 const HTML_TAG_OPEN =
-	/<(?=\/?[A-Za-z][A-Za-z0-9-]*(?:[\s/>]|$)|!|\?)/g;
+	/<(?=\/?[A-Za-z][A-Za-z0-9-]*(?:[\s/>]|$)|!|\?|[A-Za-z][A-Za-z0-9+.-]*:)/g;
+const INLINE_TAG = /<(\/?)(u|sub|sup|span)((?:\s[^<>]*)?)>/gi;
+
+// Bare tag, or one carrying only quoted attributes — unquoted values like
+// `<span style=color:red>` are not valid JSX and would throw on import.
+const QUOTED_ATTRIBUTES = /^(\s+[A-Za-z][A-Za-z0-9-]*=("[^"<>]*"|'[^'<>]*'))+\s*$/;
+
+function pairedTagOffsets(segment: string): Set<number> {
+	const paired = new Set<number>();
+	const stack: { name: string; offset: number }[] = [];
+	for (const match of segment.matchAll(INLINE_TAG)) {
+		const name = match[2].toLowerCase();
+		if (match[1] === "/") {
+			if (match[3].trim().length > 0) continue;
+			const open = stack.pop();
+			if (!open || open.name !== name) return paired;
+			paired.add(open.offset).add(match.index);
+		} else if (
+			match[3].length === 0 ||
+			QUOTED_ATTRIBUTES.test(match[3])
+		) {
+			stack.push({ name, offset: match.index });
+		}
+	}
+	return paired;
+}
+
 function escapeHtmlAngles(line: string): string {
 	// Split on inline-code spans (odd indices) and leave those untouched.
 	return line
 		.split(/(`+[^`]*`+)/)
-		.map((segment, i) =>
-			i % 2 === 1 ? segment : segment.replace(HTML_TAG_OPEN, "\\<"),
-		)
+		.map((segment, i) => {
+			if (i % 2 === 1) return segment;
+			const paired = pairedTagOffsets(segment);
+			return segment.replace(HTML_TAG_OPEN, (_match, offset: number) =>
+				paired.has(offset) ? "<" : "\\<",
+			);
+		})
 		.join("");
 }
 
@@ -682,24 +719,8 @@ export class RichTextOverlay {
 			// history, and snap the caret to the top).
 			const freshKey = this.canonicalKey(freshText);
 			const knownKeys = [this.lastSyncedFullText, ...this.recentWrites];
-			if (knownKeys.some((t) => this.canonicalKey(t) === freshKey)) {
-				// TEMP diagnostic — remove once confirmed. JSON.stringify makes
-				// the invisible whitespace difference visible in the console.
-				console.debug(
-					"[RTE] resync skipped — whitespace-only drift, not external",
-					{
-						disk: JSON.stringify(freshText),
-						lastSynced: JSON.stringify(this.lastSyncedFullText),
-					},
-				);
-				return;
-			}
+			if (knownKeys.some((t) => this.canonicalKey(t) === freshKey)) return;
 
-			// TEMP diagnostic — remove once confirmed.
-			console.debug("[RTE] resync RELOAD — genuine external change", {
-				disk: JSON.stringify(freshText),
-				lastSynced: JSON.stringify(this.lastSyncedFullText),
-			});
 			this.applyExternalText(freshText);
 		});
 	}
@@ -792,6 +813,9 @@ export class RichTextOverlay {
 						onImageUpload={(file) => this.handleImageUpload(file)}
 						onResolveImage={this.resolveImagePath}
 						onPickInternalLink={this.pickInternalLink}
+						getInternalLinkSuggestions={
+							this.internalLinkSuggestions
+						}
 						onRenderEmbed={(el, lang, code) => {
 							const component = new Component();
 							component.load();
@@ -805,14 +829,16 @@ export class RichTextOverlay {
 							);
 							return () => component.unload();
 						}}
-						onNavigate={(path) => {
-							// Use the void operator to handle the promise returned by openLinkText
+						onNavigate={(path, where) => {
 							void this.view.app.workspace.openLinkText(
 								path,
 								this.view.file?.path || "",
-								false,
+								where === "current" ? false : where,
 							);
 						}}
+						onLinkContextMenu={(linkpath, clientX, clientY) =>
+							this.showLinkContextMenu(linkpath, clientX, clientY)
+						}
 						onResolveLink={(linkpath) =>
 							this.view.app.metadataCache.getFirstLinkpathDest(
 								linkpath,
@@ -919,6 +945,50 @@ export class RichTextOverlay {
 		// 6. Decode URI component in case generateMarkdownLink encoded spaces
 		return decodeURI(cleanPath);
 	}
+
+	private showLinkContextMenu(
+		linkpath: string,
+		clientX: number,
+		clientY: number,
+	) {
+		const menu = new Menu();
+		this.view.app.workspace.handleLinkContextMenu(
+			menu,
+			linkpath,
+			this.view.file?.path || "",
+			this.view.leaf,
+		);
+		menu.showAtPosition({ x: clientX, y: clientY });
+	}
+
+	private internalLinkSuggestions = (query: string): WikilinkSuggestion[] => {
+		const app = this.view.app;
+		const currentPath = this.view.file?.path || "";
+		const needle = query.trim().toLowerCase();
+		return app.vault
+			.getMarkdownFiles()
+			.map((file) => {
+				const link =
+					app.metadataCache.fileToLinktext(file, currentPath, true) ||
+					file.basename;
+				const detail = file.path.endsWith(".md")
+					? file.path.slice(0, -3)
+					: file.path;
+				return { link, label: link, detail };
+			})
+			.filter(
+				(candidate) =>
+					!needle ||
+					candidate.label.toLowerCase().includes(needle) ||
+					candidate.detail.toLowerCase().includes(needle),
+			)
+			.sort((a, b) => {
+				const aStarts = a.label.toLowerCase().startsWith(needle);
+				const bStarts = b.label.toLowerCase().startsWith(needle);
+				if (aStarts !== bStarts) return aStarts ? -1 : 1;
+				return a.detail.localeCompare(b.detail);
+			});
+	};
 
 	private pickInternalLink = (): Promise<string | null> => {
 		const app = this.view.app;

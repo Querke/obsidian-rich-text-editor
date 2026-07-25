@@ -64,14 +64,20 @@ import {
 } from "lexical";
 import type { LexicalEditor } from "lexical";
 import { $isListItemNode } from "@lexical/list";
+import { listUnbulletPlugin } from "./listUnbullet";
 import { IndentControls } from "./IndentControls";
 import { tagLinkPlugin } from "./tagLinkPlugin";
 import { calloutPlugin, InsertCallout } from "./calloutPlugin";
 import { footnotePlugin, InsertFootnote } from "./footnotePlugin";
 import { InsertTableFormula, tableMathPlugin } from "./tableMathPlugin";
 import { autoLinkTitlePlugin } from "./autoLinkTitlePlugin";
+import { codeBlockShortcutPlugin } from "./codeBlockShortcutPlugin";
 import { PropertiesDisplay, PropertyInfo } from "./PropertiesDisplay";
 import { InsertWikilink } from "./wikilinkButton";
+import {
+	WikilinkSuggestion,
+	wikilinkShortcutPlugin,
+} from "./wikilinkShortcutPlugin";
 import { searchBarPlugin } from "./SearchBar";
 import {
 	EmbedRenderer,
@@ -112,6 +118,23 @@ export const CODE_BLOCK_LANGUAGES: Record<string, string> = {
 	sql: "SQL",
 	svelte: "Svelte",
 	lua: "Lua",
+};
+
+// Aliases accepted when typing a ``` fence, mapped onto the ids above.
+const TYPED_CODE_LANGUAGE_ALIASES: Record<string, string> = {
+	"c#": "cs",
+	csharp: "cs",
+	"c++": "cpp",
+	cplusplus: "cpp",
+	javascript: "js",
+	typescript: "ts",
+	python: "py",
+	python3: "py",
+	rs: "rust",
+	golang: "go",
+	rb: "ruby",
+	kt: "kotlin",
+	markdown: "md",
 };
 
 // Reverse lookup (display label -> code-block id) used to render the flair.
@@ -271,10 +294,16 @@ interface Props {
 	onRename: (nextTitle: string) => Promise<boolean>;
 	onImageUpload: (image: File) => Promise<string>;
 	onResolveImage: (src: string) => string;
-	onNavigate: (path: string) => void;
+	onNavigate: (path: string, where: "current" | "tab" | "window") => void;
+	onLinkContextMenu: (
+		linkpath: string,
+		clientX: number,
+		clientY: number,
+	) => void;
 	// Returns true if a note/file with this linkpath exists in the vault.
 	onResolveLink: (linkpath: string) => boolean;
 	onPickInternalLink: () => Promise<string | null>;
+	getInternalLinkSuggestions: (query: string) => WikilinkSuggestion[];
 	onRenderEmbed?: EmbedRenderer;
 }
 
@@ -1219,45 +1248,30 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 			props.onSave(newMarkdown);
 		};
 
-		// Handler for Ctrl + Click on links
-		const handleEditorClick = (e: ReactMouseEvent) => {
-			const target = e.target as HTMLElement;
-			const anchor = target.closest("a");
-			if (!anchor) {
-				return false;
-			}
+		// Classify a rendered <a> so left-click, middle-click and the
+		// right-click menu all agree on internal-vs-external.
+		type LinkTarget =
+			| { kind: "internal"; path: string }
+			| { kind: "external"; href: string }
+			| { kind: "tagSearch"; query: string };
 
+		const resolveLinkTarget = (
+			anchor: HTMLAnchorElement,
+		): LinkTarget | null => {
 			const href = anchor.getAttribute("href");
-			if (!href) {
-				return;
-			}
-
-			e.preventDefault();
-			e.stopPropagation();
+			if (!href) return null;
 
 			// Lexical may sanitize custom schemes => href becomes about:blank.
 			// In that case, use the rendered link text as the source of truth.
 			const text = (anchor.textContent ?? "").trim();
 
-			if (
-				href === "about:blank" &&
-				text.startsWith("#") &&
-				text.length > 1
-			) {
-				const tag = text.slice(1);
-				window.open(
-					"obsidian://search?query=" +
-						encodeURIComponent("tag:#" + tag),
-					"_blank",
-					"noopener,noreferrer",
-				);
-				return;
+			if (href === "about:blank" && text.startsWith("#") && text.length > 1) {
+				return { kind: "tagSearch", query: "tag:#" + text.slice(1) };
 			}
 
 			// about:blank with non-tag text == sanitized internal link.
 			if (href === "about:blank" && text.length > 0) {
-				props.onNavigate(text);
-				return;
+				return { kind: "internal", path: text };
 			}
 
 			// Lexical's link plugin auto-prefixes scheme-less hrefs with
@@ -1291,22 +1305,50 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 					(!hostPart.includes(".") ||
 						props.onResolveLink(strippedHref))
 				) {
-					props.onNavigate(strippedHref);
-					return;
+					return { kind: "internal", path: strippedHref };
 				}
 			}
 
-			// Internal links (stored as URI-encoded basenames like
-			// "My%20Note") have no URL scheme — route them through
-			// Obsidian's link opener so the target file opens inside the
-			// workspace instead of the browser.
+			// Internal links (stored as URI-encoded basenames like "My%20Note")
+			// have no URL scheme — route them through Obsidian's link opener.
 			const hasScheme = /^[a-z][a-z0-9+.-]*:/i.test(href);
 			if (!hasScheme) {
-				props.onNavigate(decodeURI(href));
-				return;
+				return { kind: "internal", path: decodeURI(href) };
 			}
 
-			window.open(href, "_blank", "noopener,noreferrer");
+			return { kind: "external", href };
+		};
+
+		const openLink = (e: ReactMouseEvent, where: "current" | "tab") => {
+			const anchor = (e.target as HTMLElement).closest("a");
+			if (!anchor) return;
+			const link = resolveLinkTarget(anchor);
+			if (!link) return;
+			e.preventDefault();
+			e.stopPropagation();
+
+			if (link.kind === "internal") {
+				props.onNavigate(link.path, where);
+			} else if (link.kind === "tagSearch") {
+				window.open(
+					"obsidian://search?query=" +
+						encodeURIComponent(link.query),
+					"_blank",
+					"noopener,noreferrer",
+				);
+			} else {
+				window.open(link.href, "_blank", "noopener,noreferrer");
+			}
+		};
+
+		const handleEditorContextMenu = (e: ReactMouseEvent) => {
+			const anchor = (e.target as HTMLElement).closest("a");
+			if (!anchor) return;
+			const link = resolveLinkTarget(anchor);
+			if (!link || link.kind !== "internal") return;
+			e.preventDefault();
+			e.stopPropagation();
+			props.onLinkContextMenu(link.path, e.clientX, e.clientY);
 		};
 
 		const TitleBar = () => {
@@ -1377,8 +1419,20 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 				ref={hostRef}
 				className="react-root"
 				onMouseDownCapture={(e) => {
-					handleEditorClick(e);
+					// Middle-click navigates on the follow-up auxclick; this
+					// only suppresses the autoscroll puck.
+					if (e.button === 1) {
+						if ((e.target as HTMLElement).closest("a")) {
+							e.preventDefault();
+						}
+						return;
+					}
+					if (e.button === 0) openLink(e, "current");
 				}}
+				onAuxClickCapture={(e) => {
+					if (e.button === 1) openLink(e, "tab");
+				}}
+				onContextMenuCapture={handleEditorContextMenu}
 			>
 				<MDXEditor
 					className={isDark ? "dark-theme dark-editor" : ""}
@@ -1386,7 +1440,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 					markdown={props.text}
 					onChange={handleContentChange}
 					contentEditableClassName="mxeditor-content-editable"
-					suppressHtmlProcessing={true}
+					suppressHtmlProcessing={false}
 					toMarkdownOptions={{ listItemIndent: "tab" }}
 					plugins={[
 						toolbarPlugin({
@@ -1395,9 +1449,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 									<UndoRedo />
 									<BoldItalicUnderlineToggles />
 									<ListsToggle />
-									<IndentControls
-										editorRef={editorRef.current}
-									/>
+									<IndentControls />
 									<MobileSafeBlockTypeSelect
 										hostRef={hostRef}
 									/>
@@ -1462,6 +1514,9 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 							},
 						}),
 						linkPlugin(),
+						wikilinkShortcutPlugin({
+							getSuggestions: props.getInternalLinkSuggestions,
+						}),
 						tagLinkPlugin(),
 						linkDialogPlugin({ showLinkTitleField: false }),
 						codeBlockPlugin({
@@ -1475,6 +1530,19 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 
 							codeMirrorExtensions: isDark ? [oneDark] : [],
 						}),
+						codeBlockShortcutPlugin({
+							resolveLanguage: (language) => {
+								const normalized = language.toLowerCase();
+								if (normalized in CODE_BLOCK_LANGUAGES) {
+									return normalized;
+								}
+								return (
+									TYPED_CODE_LANGUAGE_ALIASES[normalized] ??
+									null
+								);
+							},
+						}),
+						listUnbulletPlugin(),
 						obsidianEmbedPlugin(),
 						searchPlugin(),
 						searchBarPlugin(),

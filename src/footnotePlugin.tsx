@@ -24,12 +24,14 @@ import { setIcon } from "obsidian";
 import {
 	$applyNodeReplacement,
 	$createParagraphNode,
+	$createTextNode,
 	$getNodeByKey,
 	$getRoot,
 	$getSelection,
 	$isElementNode,
 	$isParagraphNode,
 	$isRangeSelection,
+	$isTextNode,
 	COMMAND_PRIORITY_HIGH,
 	DecoratorNode,
 	ElementNode,
@@ -631,6 +633,72 @@ function ensureTrailingParagraph(): void {
 	}
 }
 
+// The new def joins the compact list right after the last existing def —
+// appending blindly at root end would place it after the trailing
+// cursor-target paragraph that sits below the section.
+function $ensureFootnoteDefinition(id: string): void {
+	const root = $getRoot();
+	const exists = $nodesOfClass(FootnoteDefinitionNode).some(
+		(def) => def.getIdentifier() === id,
+	);
+	if (exists) return;
+
+	const def = $createFootnoteDefinitionNode(id);
+	def.append($createParagraphNode());
+	const existingDefs = root.getChildren().filter($isFootnoteDefinitionNode);
+	const lastDef = existingDefs[existingDefs.length - 1];
+	if (lastDef) {
+		lastDef.insertAfter(def);
+	} else {
+		root.append(def);
+	}
+}
+
+// Runs after Lexical has committed the typed `]`, so the caret's text node
+// already contains the literal.
+function $applyFootnoteShortcut(): boolean {
+	const selection = $getSelection();
+	if (!$isRangeSelection(selection) || !selection.isCollapsed()) return false;
+
+	const node = selection.anchor.getNode();
+	if (!$isTextNode(node)) return false;
+
+	const offset = selection.anchor.offset;
+	const text = node.getTextContent();
+	const match = text.slice(0, offset).match(/\[\^([^\]\s]+)\]$/);
+	if (!match) return false;
+
+	const id = match[1];
+	const start = offset - match[0].length;
+	const head = text.slice(0, start);
+	const tail = text.slice(offset);
+
+	const ref = $createFootnoteReferenceNode(id);
+	node.setTextContent(head);
+	if (head.length === 0) {
+		node.insertBefore(ref);
+	} else {
+		node.insertAfter(ref);
+	}
+	let caretTarget = null as ReturnType<typeof $createTextNode> | null;
+	if (tail.length > 0) {
+		caretTarget = $createTextNode(tail);
+		ref.insertAfter(caretTarget);
+	}
+	if (head.length === 0) {
+		node.remove();
+	}
+
+	$ensureFootnoteDefinition(id);
+
+	if (caretTarget) {
+		caretTarget.select(0, 0);
+	} else {
+		ref.selectNext();
+	}
+	return true;
+}
+
 // --------------------------------------------------------------------------
 // Plugin
 // --------------------------------------------------------------------------
@@ -680,9 +748,24 @@ export const footnotePlugin = realmPlugin({
 				handleFootnoteBackspace,
 				COMMAND_PRIORITY_HIGH,
 			);
+
+			const onInput = (event: Event) => {
+				if ((event as InputEvent).data !== "]") return;
+				editor.update(() => {
+					$applyFootnoteShortcut();
+				});
+			};
+			const disposeRoot = editor.registerRootListener(
+				(rootElement, prevRootElement) => {
+					prevRootElement?.removeEventListener("input", onInput);
+					rootElement?.addEventListener("input", onInput);
+				},
+			);
+
 			return () => {
 				dispose();
 				disposeBackspace();
+				disposeRoot();
 			};
 		});
 	},
@@ -745,25 +828,14 @@ export function InsertFootnote() {
 				}
 			}
 
-			// Append a matching empty definition to the footnote section. If
-			// there are already defs, the new one goes right after the last
-			// of them so it joins the compact list — appending blindly at
-			// root end would place it after the trailing cursor-target
-			// paragraph that sits below the section.
-			const root = $getRoot();
-			const def = $createFootnoteDefinitionNode(id);
-			const body = $createParagraphNode();
-			def.append(body);
-			const existingDefs = root
-				.getChildren()
-				.filter($isFootnoteDefinitionNode);
-			const lastDef = existingDefs[existingDefs.length - 1];
-			if (lastDef) {
-				lastDef.insertAfter(def);
-			} else {
-				root.append(def);
+			$ensureFootnoteDefinition(id);
+			const def = $nodesOfClass(FootnoteDefinitionNode).find(
+				(candidate) => candidate.getIdentifier() === id,
+			);
+			const body = def?.getFirstChild();
+			if ($isElementNode(body)) {
+				body.select();
 			}
-			body.select();
 		});
 	};
 

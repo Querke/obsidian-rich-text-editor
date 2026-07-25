@@ -4,9 +4,15 @@
 	max-width: min(100%, var(--file-line-width));
 }
 
+.mxeditor-content-editable {
+	font-family: var(--font-text);
+	font-size: var(--font-text-size);
+}
+
 .mxeditor-content-editable p {
 	margin: 0rem;
-	line-height: 1.5rem;
+	line-height: var(--line-height-normal);
+	font-size: inherit;
 }
 
 .mxeditor-content-editable :where(ul, ol, li, blockquote) {
@@ -166,7 +172,8 @@ div[class*="linkDialogPopoverContent"] {
    transform to dock it to the top-centre of the viewport instead — matching the
    image dialog. `!important` beats the (non-important) inline transform. Scoped
    with :has so only the link popover moves, not the table/column menus that
-   share .mdxeditor-popup-container. */
+   share .mdxeditor-popup-container. Desktop keeps the popover anchored at the
+   link; the container z-index puts it below the context menu. */
 .is-mobile
 	[data-radix-popper-content-wrapper]:has(
 		[class*="linkDialogPopoverContent"]
@@ -1906,7 +1913,9 @@ form._multiFieldForm_1e2ox_1214 ._formField_1e2ox_1220 label {
 
 ._popupContainer_1e2ox_1240 {
 	position: relative;
-	z-index: 200;
+	/* Below Obsidian's menu layer (65) so the right-click context menu on a link
+	   draws over the link-edit popover instead of behind it. */
+	z-index: 64;
 }
 
 /* --------------------------------------------------------------------------

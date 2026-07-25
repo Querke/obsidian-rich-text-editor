@@ -1,51 +1,18 @@
-import { MDXEditorMethods, SingleChoiceToggleGroup } from "@mdxeditor/editor";
+import { rootEditor$, SingleChoiceToggleGroup } from "@mdxeditor/editor";
+import { useCellValue } from "@mdxeditor/gurx";
+import { INDENT_CONTENT_COMMAND, OUTDENT_CONTENT_COMMAND } from "lexical";
 import { getIcon } from "obsidian";
 
-interface Props {
-	editorRef: MDXEditorMethods | null;
-}
+export const IndentControls = () => {
+	const editor = useCellValue(rootEditor$);
 
-export const IndentControls = (props: Props) => {
-	// Helper to simulate Tab / Shift+Tab
 	const triggerIndent = (isOutdent: boolean) => {
-		props.editorRef?.focus();
-
-		// Timeout ensures the editor is focused before manipulation
-		window.setTimeout(() => {
-			// Prefixing with 'void' marks the promise as intentionally ignored
-			void (async () => {
-				const selection = window.getSelection();
-				const activeElement = activeDocument.activeElement;
-				const originalOffset = selection?.focusOffset || 0;
-
-				if (selection && selection.rangeCount > 0) {
-					try {
-						selection.modify("move", "backward", "lineboundary");
-					} catch (e) {
-						console.warn("Failed to move cursor to start", e);
-					}
-				}
-
-				await new Promise((resolve) => window.setTimeout(resolve, 1));
-
-				if (activeElement) {
-					const event = new KeyboardEvent("keydown", {
-						bubbles: true,
-						cancelable: true,
-						key: "Tab",
-						code: "Tab",
-						shiftKey: isOutdent,
-					});
-					activeElement.dispatchEvent(event);
-				}
-
-				await new Promise((resolve) => window.setTimeout(resolve, 1));
-
-				if (selection && selection.focusNode) {
-					selection.collapse(selection.focusNode, originalOffset);
-				}
-			})();
-		}, 0);
+		if (!editor) return;
+		editor.focus();
+		editor.dispatchCommand(
+			isOutdent ? OUTDENT_CONTENT_COMMAND : INDENT_CONTENT_COMMAND,
+			undefined,
+		);
 	};
 
 	return (
