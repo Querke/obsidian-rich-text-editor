@@ -228,9 +228,7 @@ function LazyCodeBlockEditor(props: CodeBlockEditorProps) {
 				);
 				if (languageData) {
 					try {
-						extensions.push(
-							(await languageData.load()).extension,
-						);
+						extensions.push((await languageData.load()).extension);
 					} catch {
 						// Grammar failed to load; render as plain text.
 					}
@@ -463,12 +461,23 @@ function MobileSafeBlockTypeSelect(props: {
 		savedScrollTop: number | null,
 	) => {
 		editor.update(() => {
-			if (!$getNodeByKey(snap.anchorKey) || !$getNodeByKey(snap.focusKey)) {
+			if (
+				!$getNodeByKey(snap.anchorKey) ||
+				!$getNodeByKey(snap.focusKey)
+			) {
 				return;
 			}
 			const selection = $createRangeSelection();
-			selection.anchor.set(snap.anchorKey, snap.anchorOffset, snap.anchorType);
-			selection.focus.set(snap.focusKey, snap.focusOffset, snap.focusType);
+			selection.anchor.set(
+				snap.anchorKey,
+				snap.anchorOffset,
+				snap.anchorType,
+			);
+			selection.focus.set(
+				snap.focusKey,
+				snap.focusOffset,
+				snap.focusType,
+			);
 			$setSelection(selection);
 		});
 		// Selection is now set, so focus() keeps it instead of selecting the end.
@@ -613,7 +622,10 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 					hostRef.current?.querySelector<LexicalContentEditable>(
 						".mxeditor-content-editable",
 					)?.__lexicalEditor;
-				lexicalEditor?.dispatchCommand(CLEAR_HISTORY_COMMAND, undefined);
+				lexicalEditor?.dispatchCommand(
+					CLEAR_HISTORY_COMMAND,
+					undefined,
+				);
 			},
 			setProperties: (props: PropertyInfo[]) => {
 				setProperties(props);
@@ -741,7 +753,8 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 				focusNode: Node | null;
 				focusOffset: number;
 			};
-			let keyboardDismissInitialSelection: SelectionSnapshot | null = null;
+			let keyboardDismissInitialSelection: SelectionSnapshot | null =
+				null;
 			const snapshotSelection = (): SelectionSnapshot | null => {
 				const sel = window.getSelection();
 				if (!sel) return null;
@@ -1234,7 +1247,8 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 					);
 					const label = trigger?.textContent?.trim() ?? "";
 					const id =
-						CODE_BLOCK_LABEL_TO_ID.get(label) ?? label.toLowerCase();
+						CODE_BLOCK_LABEL_TO_ID.get(label) ??
+						label.toLowerCase();
 					if (id) {
 						wrapper.setAttribute("data-code-lang", id);
 					} else {
@@ -1286,7 +1300,11 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 			// In that case, use the rendered link text as the source of truth.
 			const text = (anchor.textContent ?? "").trim();
 
-			if (href === "about:blank" && text.startsWith("#") && text.length > 1) {
+			if (
+				href === "about:blank" &&
+				text.startsWith("#") &&
+				text.length > 1
+			) {
 				return { kind: "tagSearch", query: "tag:#" + text.slice(1) };
 			}
 
@@ -1353,8 +1371,7 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 				props.onNavigate(link.path, where);
 			} else if (link.kind === "tagSearch") {
 				window.open(
-					"obsidian://search?query=" +
-						encodeURIComponent(link.query),
+					"obsidian://search?query=" + encodeURIComponent(link.query),
 					"_blank",
 					"noopener,noreferrer",
 				);
@@ -1483,12 +1500,12 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 							toolbarContents: () => (
 								<>
 									<UndoRedo />
-									<BoldItalicUnderlineToggles />
-									<ListsToggle />
-									<IndentControls />
 									<MobileSafeBlockTypeSelect
 										hostRef={hostRef}
 									/>
+									<BoldItalicUnderlineToggles />
+									<ListsToggle />
+									<IndentControls />
 
 									<StrikeThroughSupSubToggles />
 									<HighlightToggle />
@@ -1504,8 +1521,8 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 									<InsertImage />
 									<InsertTable />
 									<InsertTableFormula />
-									<InsertCallout />
 									<InsertFootnote />
+									<InsertCallout />
 								</>
 							),
 						}),

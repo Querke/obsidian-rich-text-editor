@@ -38,13 +38,20 @@
 	padding-inline-start: 0.35rem;
 }
 
-/* 1. Layout: Ensure flexbox so text takes full width */
+/* 1. Layout: block, NOT flex. An item's content is inline rich text — a link,
+   bold run or code span is its own child element, and flex would lay each one
+   out as a separate non-wrapping column instead of letting them flow as one
+   paragraph. The checkbox doesn't need flex: its ::before is absolutely
+   positioned, and padding-inline-start below reserves the gutter. */
 .mdxeditor-root-contenteditable li[role="checkbox"] {
 	margin-block: 0.3rem;
 	margin-inline-start: -24px;
-	display: flex;
-	align-items: flex-start;
+	display: block;
 	position: relative;
+
+	/* A pasted URL is one unbreakable token; without this it overflows the
+	   editor instead of wrapping. */
+	overflow-wrap: break-word;
 
 	/* Gap between the checkbox and the text/caret. Lives on the list item (not
 	   the text span) so empty items keep the same offset as ones with text. */
@@ -66,26 +73,26 @@
 .mdxeditor-root-contenteditable li[role="checkbox"]::before {
 	pointer-events: auto;
 	cursor: pointer;
-	flex-shrink: 0;
-	margin-inline-end: 24px;
 	-webkit-user-select: none;
 	user-select: none;
 	-webkit-touch-callout: none;
 	touch-action: manipulation;
 }
 
-/* 3. Text: Re-enable clicks for the text and make it fill the space */
-.mdxeditor-root-contenteditable li[role="checkbox"] > span {
+/* 3. Content: Re-enable clicks for everything the item holds. Every child, not
+   just direct spans — a link or bold run would otherwise inherit the item's
+   `pointer-events: none` and become unclickable. */
+.mdxeditor-root-contenteditable li[role="checkbox"] > * {
 	pointer-events: auto;
 	cursor: text;
 
-	flex: 1; /* Grow to fill the line */
-	min-width: 0;
-	display: block; /* Ensure it behaves like a block for clicks */
-
-	/* Fix z-index to ensure it sits above the list item background */
+	/* Sits above the list item background. */
 	position: relative;
 	z-index: 1;
+}
+
+.mdxeditor-root-contenteditable li[role="checkbox"] > a {
+	cursor: pointer;
 }
 
 /* 4. Visuals: Remove the focus ring entirely */
@@ -329,7 +336,7 @@ mark {
 	z-index: 2;
 	display: flex;
 	flex-direction: row;
-	gap: var(--spacing-1);
+	gap: var(--spacing-2);
 	border-radius: var(--radius-medium);
 	padding: var(--spacing-1_5);
 	align-items: center;
@@ -359,10 +366,14 @@ mark {
 	display: block;
 }
 
-._toolbarRoot_1e2ox_162 button {
+/* Obsidian's own `button` styling is more specific than the mdxeditor toolbar
+   classes on mobile, so every box property the toolbar needs is asserted from
+   this one high-specificity reset. State colours below must stay at or above
+   its specificity. */
+.mdxeditor .mdxeditor-toolbar._toolbarRoot_1e2ox_162 button {
 	border: 0;
 	background-color: transparent;
-	color: inherit;
+	color: var(--text-muted);
 	font: inherit;
 	line-height: 1;
 	-webkit-appearance: none;
@@ -370,11 +381,46 @@ mark {
 	appearance: none;
 	box-sizing: border-box;
 	box-shadow: none;
-	height: auto;
+	height: var(--spacing-7);
 	min-height: 0;
 	min-width: 0;
 	margin: 0;
-	padding: 0;
+	padding: var(--spacing-0_5);
+	width: fit-content;
+}
+
+@media (hover: hover) {
+	.mdxeditor .mdxeditor-toolbar._toolbarRoot_1e2ox_162 button:hover {
+		background-color: var(--background-modifier-hover);
+		color: var(--text-normal);
+	}
+}
+
+.mdxeditor .mdxeditor-toolbar._toolbarRoot_1e2ox_162 button:active,
+.mdxeditor .mdxeditor-toolbar._toolbarRoot_1e2ox_162 button[data-state="on"],
+.mdxeditor .mdxeditor-toolbar._toolbarRoot_1e2ox_162 button[data-state="open"] {
+	background-color: var(--interactive-accent);
+	color: var(--text-on-accent);
+}
+
+.mdxeditor .mdxeditor-toolbar._toolbarRoot_1e2ox_162 button:disabled,
+.mdxeditor .mdxeditor-toolbar._toolbarRoot_1e2ox_162 button[data-disabled] {
+	color: var(--text-faint);
+	pointer-events: none;
+}
+
+.mdxeditor .mdxeditor-toolbar._toolbarRoot_1e2ox_162 svg {
+	width: var(--spacing-6);
+	height: var(--spacing-6);
+}
+
+/* Two icon sets share the toolbar: lucide (`.svg-icon`) draws ~18/24 of its
+   box, mdxeditor's own icons only ~15/24, and lucide's sigma is smaller again.
+   Same box, visibly different glyph, so scale the small ones up until they all
+   read ~18px. The transform doesn't affect layout, so button boxes stay equal. */
+.mdxeditor .mdxeditor-toolbar._toolbarRoot_1e2ox_162 svg:not(.svg-icon),
+.mdxeditor .mdxeditor-toolbar._toolbarRoot_1e2ox_162 svg.lucide-sigma {
+	transform: scale(1.15);
 }
 
 ._readOnlyToolbarRoot_1e2ox_189 {
@@ -409,7 +455,9 @@ mark {
 
 ._toolbarGroupOfGroups_1e2ox_219 {
 	display: flex;
-	margin: 0 var(--spacing-1);
+	flex: 0 0 auto;
+	margin: 0;
+	gap: var(--spacing-2);
 }
 
 ._toolbarRoot_1e2ox_162 ._toolbarToggleItem_1e2ox_208,
@@ -421,19 +469,28 @@ mark {
 	align-items: center;
 	justify-content: center;
 	flex: 0 0 auto;
-	border: 1px solid var(--background-modifier-border);
 	border-radius: 6px;
-	background-color: var(--background-primary);
-	color: var(--text-muted);
 	font-size: inherit;
-	-webkit-appearance: none;
-	-moz-appearance: none;
-	appearance: none;
-	box-sizing: border-box;
 	cursor: default;
-	min-height: var(--spacing-6);
-	height: 100%;
-	padding-left: 10px;
+}
+
+.mdxeditor
+	.mdxeditor-toolbar._toolbarRoot_1e2ox_162
+	button._toolbarNodeKindSelectTrigger_1e2ox_306,
+.mdxeditor
+	.mdxeditor-toolbar._toolbarRoot_1e2ox_162
+	button._toolbarButtonSelectTrigger_1e2ox_307,
+.mdxeditor
+	.mdxeditor-toolbar._toolbarRoot_1e2ox_162
+	button._selectTrigger_1e2ox_308 {
+	padding-inline: var(--spacing-2);
+}
+
+.mdxeditor
+	.mdxeditor-toolbar._toolbarRoot_1e2ox_162
+	button._selectTrigger_1e2ox_308 {
+	min-width: var(--spacing-24);
+	font-size: var(--font-ui-smaller);
 }
 
 ._toolbarRoot_1e2ox_162
@@ -447,96 +504,8 @@ mark {
 	color: currentColor;
 }
 
-._toolbarRoot_1e2ox_162
-	._toolbarToggleSingleGroup_1e2ox_224
-	._toolbarToggleItem_1e2ox_208,
-._toolbarRoot_1e2ox_162 ._toolbarButton_1e2ox_239 {
-	padding: var(--spacing-0_5);
-}
-
-._toolbarRoot_1e2ox_162
-	._toolbarToggleSingleGroup_1e2ox_224
-	._toolbarToggleItem_1e2ox_208 {
-	border-radius: 0;
-}
-
-._toolbarRoot_1e2ox_162
-	._toolbarToggleSingleGroup_1e2ox_224:first-of-type
-	._toolbarToggleItem_1e2ox_208:only-child,
-._toolbarRoot_1e2ox_162
-	._toolbarToggleSingleGroup_1e2ox_224:only-child
-	._toolbarToggleItem_1e2ox_208:first-child,
-._toolbarRoot_1e2ox_162
-	._toolbarModeSwitch_1e2ox_198
-	._toolbarToggleItem_1e2ox_208:first-child {
-	border-top-left-radius: 6px;
-	border-bottom-left-radius: 6px;
-}
-
-._toolbarRoot_1e2ox_162
-	._toolbarToggleSingleGroup_1e2ox_224:last-of-type
-	._toolbarToggleItem_1e2ox_208:only-child,
-._toolbarRoot_1e2ox_162
-	._toolbarToggleSingleGroup_1e2ox_224:only-child
-	._toolbarToggleItem_1e2ox_208:last-child,
-._toolbarRoot_1e2ox_162
-	._toolbarModeSwitch_1e2ox_198
-	._toolbarToggleItem_1e2ox_208:last-child {
-	border-top-right-radius: 6px;
-	border-bottom-right-radius: 6px;
-}
-
-@media (hover: hover) {
-	._toolbarRoot_1e2ox_162 ._toolbarToggleItem_1e2ox_208:hover,
-	._toolbarRoot_1e2ox_162 ._toolbarButton_1e2ox_239:hover,
-	._toolbarRoot_1e2ox_162 ._toolbarNodeKindSelectTrigger_1e2ox_306:hover,
-	._toolbarRoot_1e2ox_162 ._toolbarButtonSelectTrigger_1e2ox_307:hover,
-	._toolbarRoot_1e2ox_162 ._selectTrigger_1e2ox_308:hover {
-		border-color: var(
-			--background-modifier-border-hover,
-			var(--background-modifier-border)
-		);
-		background-color: var(--background-modifier-hover);
-		color: var(--text-normal);
-	}
-}
-
-._toolbarRoot_1e2ox_162 ._toolbarToggleItem_1e2ox_208:active svg,
-._toolbarRoot_1e2ox_162 ._toolbarButton_1e2ox_239:active svg {
-	transform: translate(1px, 1px);
-}
-
-._toolbarRoot_1e2ox_162 ._toolbarToggleItem_1e2ox_208[data-state="on"],
-._toolbarRoot_1e2ox_162 ._toolbarButton_1e2ox_239[data-state="on"],
-._toolbarRoot_1e2ox_162 ._toolbarToggleItem_1e2ox_208:active,
-._toolbarRoot_1e2ox_162 ._toolbarButton_1e2ox_239:active,
-._toolbarRoot_1e2ox_162
-	._toolbarNodeKindSelectTrigger_1e2ox_306[data-state="open"],
-._toolbarRoot_1e2ox_162
-	._toolbarButtonSelectTrigger_1e2ox_307[data-state="open"],
-._toolbarRoot_1e2ox_162 ._selectTrigger_1e2ox_308[data-state="open"] {
-	border-color: var(--interactive-accent);
-	color: var(--text-on-accent);
-	background-color: var(--interactive-accent);
-}
-
-._toolbarRoot_1e2ox_162 ._toolbarToggleItem_1e2ox_208[data-disabled],
-._toolbarRoot_1e2ox_162 ._toolbarButton_1e2ox_239[data-disabled],
-._toolbarRoot_1e2ox_162 ._toolbarToggleItem_1e2ox_208:disabled,
-._toolbarRoot_1e2ox_162 ._toolbarButton_1e2ox_239:disabled {
-	border-color: var(--background-modifier-border);
-	color: var(--text-faint);
-	pointer-events: none;
-}
-
-._toolbarRoot_1e2ox_162 ._toolbarToggleItem_1e2ox_208[data-disabled] svg,
-._toolbarRoot_1e2ox_162 ._toolbarButton_1e2ox_239[data-disabled] svg {
-	color: var(--text-faint);
-}
-
 ._toolbarRoot_1e2ox_162 ._toolbarButton_1e2ox_239 {
 	border-radius: 6px;
-	min-width: var(--spacing-6);
 }
 
 ._toolbarRoot_1e2ox_162 ._activeToolbarButton_1e2ox_275 {
@@ -545,8 +514,10 @@ mark {
 
 ._toolbarToggleSingleGroup_1e2ox_224 {
 	display: flex;
+	flex: 0 0 auto;
 	align-items: center;
 	white-space: nowrap;
+	gap: var(--spacing-2);
 }
 
 ._toolbarNodeKindSelectContainer_1e2ox_285,

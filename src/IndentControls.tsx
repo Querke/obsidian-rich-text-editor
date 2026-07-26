@@ -51,8 +51,6 @@ const ObsidianIcon = ({ iconId }: { iconId: string }) => {
 				display: "flex",
 				alignItems: "center",
 				justifyContent: "center",
-				width: "24px",
-				height: "24px",
 			}}
 			dangerouslySetInnerHTML={{ __html: iconEl.outerHTML }}
 		/>

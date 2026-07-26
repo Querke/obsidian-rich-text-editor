@@ -42,14 +42,20 @@ function topListOf(list: ListNode): ListNode {
 	return top;
 }
 
-function removeIfEmpty(list: ListNode): void {
-	if (list.getChildrenSize() !== 0) return;
-	const parent = list.getParent();
-	list.remove();
-	if ($isListItemNode(parent) && parent.getChildrenSize() === 0) {
-		const grandParent = parent.getParent();
-		parent.remove();
-		if ($isListNode(grandParent)) removeIfEmpty(grandParent);
+// Lexical drops an element that can't be empty the moment its last child goes,
+// so the nodes handed here may already be detached — hence the isAttached check
+// rather than assuming we still own the chain.
+function pruneEmptyLists(node: LexicalNode | null): void {
+	let current = node;
+	while (
+		current &&
+		current.isAttached() &&
+		($isListNode(current) || $isListItemNode(current)) &&
+		current.getChildrenSize() === 0
+	) {
+		const parent: LexicalNode | null = current.getParent();
+		current.remove();
+		current = parent;
 	}
 }
 
@@ -84,28 +90,30 @@ function $unbulletItem(
 	const paragraph = $createParagraphNode();
 	li.getChildren().forEach((child) => paragraph.append(child));
 
+	// Splice the paragraph in *before* detaching the item: removing the last
+	// item takes the list with it, and inserting relative to a detached node
+	// throws.
 	const outer = list.getParent();
-	const isNested = $isListNode(outer) || $isListItemNode(outer);
-
-	if (isNested) {
+	if ($isListNode(outer) || $isListItemNode(outer)) {
 		const top = topListOf(list);
-		li.remove();
 		const cursor = cursors.get(top.getKey()) ?? top;
 		cursor.insertAfter(paragraph);
 		cursors.set(top.getKey(), paragraph);
-		removeIfEmpty(list);
+		li.remove();
+		pruneEmptyLists(list);
+		pruneEmptyLists(outer);
 		return;
 	}
 
 	const after = li.getNextSiblings();
-	li.remove();
 	list.insertAfter(paragraph);
+	li.remove();
 	if (after.length > 0) {
 		const trailing = $createListNode(list.getListType(), list.getStart());
 		after.forEach((node) => trailing.append(node));
 		paragraph.insertAfter(trailing);
 	}
-	removeIfEmpty(list);
+	pruneEmptyLists(list);
 }
 
 export const listUnbulletPlugin = realmPlugin({
@@ -121,7 +129,10 @@ export const listUnbulletPlugin = realmPlugin({
 					);
 					if (items.length === 0) return false;
 					const cursors = new Map<string, LexicalNode>();
-					for (const li of items) $unbulletItem(li, cursors);
+					for (const li of items) {
+						// An earlier item may have collapsed this one's list.
+						if (li.isAttached()) $unbulletItem(li, cursors);
+					}
 					return true;
 				},
 				COMMAND_PRIORITY_CRITICAL,

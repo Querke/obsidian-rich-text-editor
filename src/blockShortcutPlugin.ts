@@ -15,6 +15,7 @@ import {
 	$isRangeSelection,
 	$isTextNode,
 	COMMAND_PRIORITY_HIGH,
+	INSERT_PARAGRAPH_COMMAND,
 	KEY_ENTER_COMMAND,
 	KEY_SPACE_COMMAND,
 	type LexicalNode,
@@ -68,12 +69,20 @@ export function $convertFence(
 	return true;
 }
 
+// iOS/macOS smart punctuation folds "--" into an en/em dash before the third
+// hyphen lands, so three taps of the key arrive as "—-". Count a folded dash as
+// the two hyphens it replaced.
+const DASH_WEIGHT: Record<string, number> = { "-": 1, "–": 2, "—": 2 };
+
+function isThematicBreak(text: string): boolean {
+	if (/^\*{3,}$/.test(text) || /^_{3,}$/.test(text)) return true;
+	if (!/^[-–—]+$/.test(text)) return false;
+	return [...text].reduce((total, ch) => total + DASH_WEIGHT[ch], 0) >= 3;
+}
+
 export function $convertThematicBreak(): boolean {
 	const paragraph = $markerParagraph();
-	if (
-		!paragraph ||
-		!/^(-{3,}|\*{3,}|_{3,})$/.test(paragraph.getTextContent())
-	) {
+	if (!paragraph || !isThematicBreak(paragraph.getTextContent())) {
 		return false;
 	}
 
@@ -96,17 +105,25 @@ export const blockShortcutPlugin = realmPlugin<BlockShortcutPluginParams>({
 	init(realm, params) {
 		if (!params) return;
 		const createCodeBlock = params.createCodeBlock;
+		const convert = () =>
+			$convertFence(createCodeBlock) || $convertThematicBreak();
+
 		realm.pub(createRootEditorSubscription$, (editor) =>
 			mergeRegister(
 				editor.registerCommand(
 					KEY_ENTER_COMMAND,
 					(event) => {
-						if (!$convertFence(createCodeBlock)) {
-							if (!$convertThematicBreak()) return false;
-						}
+						if (!convert()) return false;
 						event?.preventDefault();
 						return true;
 					},
+					COMMAND_PRIORITY_HIGH,
+				),
+				// Soft keyboards (iOS) commit a newline through beforeinput
+				// rather than keydown, so KEY_ENTER_COMMAND never fires there.
+				editor.registerCommand(
+					INSERT_PARAGRAPH_COMMAND,
+					convert,
 					COMMAND_PRIORITY_HIGH,
 				),
 				editor.registerCommand(

@@ -22,15 +22,18 @@ import {
 	switchFromPreviewToLinkEdit$,
 	updateLink$,
 } from "@mdxeditor/editor";
-import { Cell, useCellValues, usePublisher } from "@mdxeditor/gurx";
+import { Cell, Signal, useCellValues, usePublisher } from "@mdxeditor/gurx";
 import { $isLinkNode } from "@lexical/link";
 import type { LinkNode } from "@lexical/link";
+import { mergeRegister } from "@lexical/utils";
 import {
 	$getNodeByKey,
 	$getSelection,
 	$isElementNode,
 	$isRangeSelection,
 	$isTextNode,
+	COMMAND_PRIORITY_CRITICAL,
+	KEY_ESCAPE_COMMAND,
 } from "lexical";
 import { useEffect, useRef, useState } from "react";
 import { DockedBar } from "./editorDock";
@@ -42,6 +45,17 @@ export type OpenLinkHandler = (
 ) => void;
 
 const openLink$ = Cell<OpenLinkHandler | null>(null);
+
+// Raised by Close; Escape is caught as a command instead.
+const dismissLink$ = Signal<true>();
+
+interface LinkPreview {
+	type: "preview";
+	url: string;
+	title: string;
+	linkNodeKey: string;
+	rectangle: { top: number; left: number; width: number; height: number };
+}
 
 // The link the caret sits immediately before or after, if any.
 //
@@ -59,8 +73,8 @@ function $linkNextToCaret(): LinkNode | null {
 	const node = anchor.getNode();
 
 	if ($isTextNode(node)) {
-		// Already inside a link — the case MDXEditor handles by itself.
-		if ($isLinkNode(node.getParent())) return null;
+		const parent = node.getParent();
+		if ($isLinkNode(parent)) return parent;
 		const before = anchor.offset === 0 ? node.getPreviousSibling() : null;
 		if ($isLinkNode(before)) return before;
 		const after =
@@ -153,6 +167,7 @@ function LinkDialogBar() {
 		openLink$,
 	);
 	const setState = usePublisher(linkDialogState$);
+	const dismiss = usePublisher(dismissLink$);
 	const updateLink = usePublisher(updateLink$);
 	const cancelLinkEdit = usePublisher(cancelLinkEdit$);
 	const switchToEdit = usePublisher(switchFromPreviewToLinkEdit$);
@@ -180,8 +195,8 @@ function LinkDialogBar() {
 	}
 
 	// The bar also opens for a caret that merely sits next to a link (see
-	// `$linkNextToCaret`), where the Lexical selection is outside the link node —
-	// but MDXEditor's edit and remove actions both operate on that selection.
+	// `$linkNextToCaret`), where the Lexical selection may be outside the link
+	// node — but MDXEditor's edit and remove actions operate on that selection.
 	// Pull it into the link first: collapsed at the link's end for editing (so
 	// `updateLink$` takes its single-link-node path and rewrites the anchor text
 	// too), spanning the link's children for removal (so `extract()` hands
@@ -276,7 +291,10 @@ function LinkDialogBar() {
 						className="clickable-icon"
 						aria-label="Close"
 						onMouseDown={(e) => e.preventDefault()}
-						onClick={() => setState({ type: "inactive" })}
+						onClick={() => {
+							dismiss(true);
+							setState({ type: "inactive" });
+						}}
 					>
 						<LucideIcon name="x" />
 					</button>
@@ -295,39 +313,74 @@ export const linkDialogBarPlugin = realmPlugin<{
 
 		// Widen MDXEditor's detection to carets sitting next to a link.
 		//
+		// Deleting the text after a link leaves an *element*-anchored caret on
+		// the paragraph (Lexical drops the emptied text node), and MDXEditor's
+		// `getSelectedNode` resolves that to the paragraph itself — so it sees
+		// no link and publishes `inactive`. It re-derives off `currentSelection$`
+		// on every selection change, including the one the browser fires after
+		// reconciling, so a single publish of ours just gets overwritten a tick
+		// later: the bar blinks in and out. Hence re-asserting rather than
+		// publishing once.
+		//
 		// Reads the state handed to the update listener rather than
 		// `editor.getEditorState()`: a caret move is dispatched from inside the
 		// update that commits it, so the editor's current state still describes
 		// the *previous* caret position and detection would run a step behind.
 		// Node fields have to be pulled out inside the callback too — node
 		// methods throw once the read has returned.
-		//
-		// Only the publish is deferred, so it lands after MDXEditor's own
-		// derivation off `currentSelection$` has settled and just fills in the
-		// gaps where that came up empty. Keying this off editor updates rather
-		// than off `linkDialogState$` is what lets Escape and Close stick:
-		// neither moves the caret, so neither reopens the bar.
+		let adjacent: LinkPreview | null = null;
+		let dismissedKey: string | null = null;
+
+		// Deferred so it lands after MDXEditor's own derivation has settled,
+		// and only fills in where that came up empty.
+		const openIfAdjacent = () => {
+			if (!adjacent || adjacent.linkNodeKey === dismissedKey) return;
+			if (realm.getValue(linkDialogState$).type !== "inactive") return;
+			realm.pub(linkDialogState$, adjacent);
+		};
+
+		realm.sub(linkDialogState$, (state) => {
+			if (state.type === "inactive") queueMicrotask(openIfAdjacent);
+		});
+		// Escape and Close have to stick, so remember which link was dismissed
+		// and leave it alone until the caret visits a different one.
+		realm.sub(dismissLink$, () => {
+			dismissedKey = adjacent?.linkNodeKey ?? null;
+		});
+
 		realm.pub(createActiveEditorSubscription$, (editor) =>
-			editor.registerUpdateListener(({ editorState }) => {
-				const preview = editorState.read(() => {
-					const link = $linkNextToCaret();
-					if (!link) return null;
-					return {
-						type: "preview" as const,
-						url: link.getURL(),
-						title: link.getTitle() ?? "",
-						linkNodeKey: link.getKey(),
-						rectangle: { top: 0, left: 0, width: 0, height: 0 },
-					};
-				});
-				if (!preview) return;
-				queueMicrotask(() => {
-					if (realm.getValue(linkDialogState$).type !== "inactive") {
-						return;
+			mergeRegister(
+				editor.registerUpdateListener(({ editorState }) => {
+					const next = editorState.read(() => {
+						const link = $linkNextToCaret();
+						if (!link) return null;
+						return {
+							type: "preview" as const,
+							url: link.getURL(),
+							title: link.getTitle() ?? "",
+							linkNodeKey: link.getKey(),
+							rectangle: { top: 0, left: 0, width: 0, height: 0 },
+						};
+					});
+					if (next?.linkNodeKey !== adjacent?.linkNodeKey) {
+						dismissedKey = null;
 					}
-					realm.pub(linkDialogState$, preview);
-				});
-			}),
+					adjacent = next;
+					queueMicrotask(openIfAdjacent);
+				}),
+				editor.registerCommand(
+					KEY_ESCAPE_COMMAND,
+					() => {
+						if (
+							realm.getValue(linkDialogState$).type !== "inactive"
+						) {
+							dismissedKey = adjacent?.linkNodeKey ?? null;
+						}
+						return false;
+					},
+					COMMAND_PRIORITY_CRITICAL,
+				),
+			),
 		);
 	},
 	// The host re-creates its callbacks on every render, so refresh the handler
