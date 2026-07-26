@@ -79,6 +79,41 @@ function escapeHtmlAngles(line: string): string {
 		.join("");
 }
 
+// The serializer pads list markers out to a tab stop (`*   [ ] item`), which
+// Obsidian does not read as a task. Rewrite markers to `- ` / `1. ` while
+// leaving the leading indentation — which carries the nesting — alone.
+function normalizeListMarkers(text: string): string {
+	const LIST_LINE = /^([\t ]*(?:>[\t ]*)*)([-*+]|\d+[.)])[\t ]+(?=\S)/;
+	const FENCE = /^[\t ]*(?:>[\t ]*)*(`{3,}|~{3,})/;
+	let fence: string | null = null;
+
+	return text
+		.split("\n")
+		.map((line) => {
+			const marker = line.match(FENCE)?.[1];
+			if (fence !== null) {
+				if (
+					marker &&
+					marker[0] === fence[0] &&
+					marker.length >= fence.length
+				) {
+					fence = null;
+				}
+				return line;
+			}
+			if (marker) {
+				fence = marker;
+				return line;
+			}
+			return line.replace(
+				LIST_LINE,
+				(_m, prefix: string, bullet: string) =>
+					`${prefix}${/^\d/.test(bullet) ? bullet : "-"} `,
+			);
+		})
+		.join("\n");
+}
+
 export class RichTextOverlay {
 	private root: Root | null = null;
 	private container: HTMLElement;
@@ -248,6 +283,8 @@ export class RichTextOverlay {
 		// Callouts: convert `:::callout` directives back to `> [!type]` syntax
 		// before the newline-collapsing below touches the block structure.
 		output = mdxCalloutsToObsidian(output);
+
+		output = normalizeListMarkers(output);
 
 		// 2. Reduce excessive newlines (Halve them: \n\n -> \n)
 		output = output.replace(/\n{2,}/g, (m) =>
