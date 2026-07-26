@@ -218,13 +218,13 @@ export default class RichTextPlugin extends Plugin {
 			// behaviour so the standard editor search still works.
 			const view = this.app.workspace.getActiveViewOfType(MarkdownView);
 			if (original.editorCheckCallback && view) {
-				const res = original.editorCheckCallback.call(
+				const res: unknown = original.editorCheckCallback.call(
 					cmd,
 					checking,
 					view.editor,
 					view,
 				);
-				return checking ? (res ?? false) : true;
+				return checking ? res === true : true;
 			}
 			if (original.editorCallback && view) {
 				if (!checking) {
@@ -233,8 +233,8 @@ export default class RichTextPlugin extends Plugin {
 				return true;
 			}
 			if (original.checkCallback) {
-				const res = original.checkCallback.call(cmd, checking);
-				return checking ? (res ?? false) : true;
+				const res: unknown = original.checkCallback.call(cmd, checking);
+				return checking ? res === true : true;
 			}
 			if (original.callback) {
 				if (!checking) original.callback.call(cmd);

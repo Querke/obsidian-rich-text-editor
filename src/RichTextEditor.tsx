@@ -197,10 +197,10 @@ function LazyCodeBlockEditor(props: CodeBlockEditorProps) {
 			if (content) {
 				content.focus();
 			} else if (++tries < 20) {
-				requestAnimationFrame(tryFocus);
+				window.requestAnimationFrame(tryFocus);
 			}
 		};
-		requestAnimationFrame(tryFocus);
+		window.requestAnimationFrame(tryFocus);
 	}, [active]);
 
 	useEffect(() => {
@@ -432,10 +432,12 @@ function scrollSelectionIntoView(host: HTMLElement) {
 const BLOCK_TYPE_ITEMS: { label: string; value: BlockType }[] = [
 	{ label: "Paragraph", value: "paragraph" },
 	{ label: "Quote", value: "quote" },
-	...([1, 2, 3, 4, 5, 6] as const).map((n) => ({
-		label: `Heading ${n}`,
-		value: `h${n}` as BlockType,
-	})),
+	...([1, 2, 3, 4, 5, 6] as const).map(
+		(n): { label: string; value: BlockType } => ({
+			label: `Heading ${n}`,
+			value: `h${n}`,
+		}),
+	),
 ];
 
 function MobileSafeBlockTypeSelect(props: {
