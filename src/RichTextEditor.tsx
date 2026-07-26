@@ -13,7 +13,6 @@ import { basicLight } from "cm6-theme-basic-light";
 import { csharp } from "@replit/codemirror-lang-csharp";
 import {
 	$createCodeBlockNode,
-	BlockTypeSelect,
 	BoldItalicUnderlineToggles,
 	codeBlockPlugin,
 	CodeBlockEditorDescriptor,
@@ -21,7 +20,9 @@ import {
 	codeMirrorPlugin,
 	CodeMirrorEditor,
 	CodeToggle,
+	convertSelectionToNode$,
 	CreateLink,
+	currentBlockType$,
 	directivesPlugin,
 	headingsPlugin,
 	HighlightToggle,
@@ -39,12 +40,14 @@ import {
 	MDXEditorMethods,
 	quotePlugin,
 	searchPlugin,
+	Select,
 	StrikeThroughSupSubToggles,
 	tablePlugin,
 	thematicBreakPlugin,
 	toolbarPlugin,
 	UndoRedo,
 } from "@mdxeditor/editor";
+import type { BlockType } from "@mdxeditor/editor";
 import {
 	forwardRef,
 	useEffect,
@@ -58,12 +61,15 @@ import {
 	$getNearestNodeFromDOMNode,
 	$getSelection,
 	$isRangeSelection,
+	$createParagraphNode,
 	$createRangeSelection,
 	$setSelection,
 	$getNodeByKey,
 	CLEAR_HISTORY_COMMAND,
 } from "lexical";
 import type { LexicalEditor } from "lexical";
+import { $createHeadingNode, $createQuoteNode } from "@lexical/rich-text";
+import { useCellValue, usePublisher } from "@mdxeditor/gurx";
 import { $isListItemNode } from "@lexical/list";
 import { listUnbulletPlugin } from "./listUnbullet";
 import { IndentControls } from "./IndentControls";
@@ -399,7 +405,8 @@ function scrollSelectionIntoView(host: HTMLElement) {
 	scroller.scrollTop += rect.bottom - (visibleBottom - margin);
 }
 
-// Wraps MDXEditor's BlockTypeSelect to fix a mobile-only bug: picking a block
+// Reimplements MDXEditor's BlockTypeSelect (so blocks outside the list —
+// lists, code, callouts — show "Other") and fixes a mobile-only bug: picking a block
 // type from the dropdown moves the caret to the bottom of the document.
 //
 // MDXEditor converts the block with `$setBlocksType(...)` and then runs
@@ -422,9 +429,20 @@ function scrollSelectionIntoView(host: HTMLElement) {
 // skips scroll-into-view for non-collapsed selections — leaving the caret
 // scrolled off-screen. So after restoring, we explicitly scroll it back into
 // view across the keyboard-reopen animation window.
+const BLOCK_TYPE_ITEMS: { label: string; value: BlockType }[] = [
+	{ label: "Paragraph", value: "paragraph" },
+	{ label: "Quote", value: "quote" },
+	...([1, 2, 3, 4, 5, 6] as const).map((n) => ({
+		label: `Heading ${n}`,
+		value: `h${n}` as BlockType,
+	})),
+];
+
 function MobileSafeBlockTypeSelect(props: {
 	hostRef: { current: HTMLDivElement | null };
 }) {
+	const convertSelectionToNode = usePublisher(convertSelectionToNode$);
+	const currentBlockType = useCellValue(currentBlockType$);
 	const cleanupRef = useRef<(() => void) | null>(null);
 
 	const getLexicalEditor = (): LexicalEditor | null => {
@@ -577,7 +595,30 @@ function MobileSafeBlockTypeSelect(props: {
 			className="rte-blocktype-select"
 			onPointerDownCapture={handlePointerDownCapture}
 		>
-			<BlockTypeSelect />
+			<Select<BlockType>
+				value={
+					BLOCK_TYPE_ITEMS.some(
+						(item) => item.value === currentBlockType,
+					)
+						? currentBlockType
+						: ""
+				}
+				onChange={(blockType) => {
+					if (blockType === "") return;
+					if (blockType === "paragraph") {
+						convertSelectionToNode(() => $createParagraphNode());
+					} else if (blockType === "quote") {
+						convertSelectionToNode(() => $createQuoteNode());
+					} else {
+						convertSelectionToNode(() =>
+							$createHeadingNode(blockType),
+						);
+					}
+				}}
+				triggerTitle="Select block type"
+				placeholder="Other"
+				items={BLOCK_TYPE_ITEMS}
+			/>
 		</span>
 	);
 }

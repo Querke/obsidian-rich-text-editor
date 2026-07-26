@@ -469,7 +469,7 @@ mark {
 	align-items: center;
 	justify-content: center;
 	flex: 0 0 auto;
-	border-radius: 6px;
+	border-radius: 3px;
 	font-size: inherit;
 	cursor: default;
 }
@@ -505,7 +505,7 @@ mark {
 }
 
 ._toolbarRoot_1e2ox_162 ._toolbarButton_1e2ox_239 {
-	border-radius: 6px;
+	border-radius: 3px;
 }
 
 ._toolbarRoot_1e2ox_162 ._activeToolbarButton_1e2ox_275 {
@@ -563,7 +563,7 @@ mark {
 	width: var(--spacing-36);
 	padding: var(--spacing-0_5) var(--spacing-1);
 	padding-inline-start: var(--spacing-2);
-	border-radius: 6px;
+	border-radius: 3px;
 	white-space: nowrap;
 	flex-wrap: nowrap;
 	font-size: var(--text-sm);
@@ -575,8 +575,8 @@ mark {
 ._toolbarButtonSelectTrigger_1e2ox_307[data-state="open"],
 ._selectTrigger_1e2ox_308[data-state="open"] {
 	filter: drop-shadow(0 2px 2px rgb(0 0 0 / 0.2));
-	border-bottom-right-radius: 6px;
-	border-bottom-left-radius: 6px;
+	border-bottom-right-radius: 3px;
+	border-bottom-left-radius: 3px;
 }
 
 ._selectTrigger_1e2ox_308[data-placeholder] > span:first-child {
