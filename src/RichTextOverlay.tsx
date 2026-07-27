@@ -264,7 +264,7 @@ export class RichTextOverlay {
 
 	mount() {
 		this.root = createRoot(this.container);
-		this.updateReadableLineLength();
+		this.updateAppearance();
 		this.render();
 	}
 
@@ -888,17 +888,24 @@ export class RichTextOverlay {
 		).forEach((el) => el.remove());
 	}
 
-	updateReadableLineLength() {
+	updateAppearance() {
 		// @ts-ignore - access internal Obsidian config via this.view.app
 		const vaultConfig = this.view.app
 			.vault as typeof this.view.app.vault & {
 			getConfig?: (key: string) => unknown;
 		};
-		const isReadable =
-			vaultConfig.getConfig?.("readableLineLength") === true;
 
-		// Apply class to OUR container, not the parent contentEl
-		this.container.toggleClass("is-readable-line-width", isReadable);
+		// Apply classes to OUR container, not the parent contentEl
+		this.container.toggleClass(
+			"is-readable-line-width",
+			vaultConfig.getConfig?.("readableLineLength") === true,
+		);
+		// "Show inline title" defaults to on, so only an explicit false hides
+		// our title bar — an older Obsidian that doesn't know the key keeps it.
+		this.container.toggleClass(
+			"is-inline-title-hidden",
+			vaultConfig.getConfig?.("showInlineTitle") === false,
+		);
 	}
 
 	private async handleImageUpload(file: File): Promise<string> {

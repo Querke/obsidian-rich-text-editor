@@ -7,6 +7,8 @@ import {
 	setIcon,
 	View,
 	Editor,
+	EventRef,
+	Vault,
 } from "obsidian";
 import { RichTextOverlay } from "./src/RichTextOverlay";
 
@@ -125,16 +127,22 @@ export default class RichTextPlugin extends Plugin {
 			}),
 		);
 
-		this.registerEvent(
-			this.app.workspace.on("css-change", () => {
-				// Update every active overlay
-				this.app.workspace.iterateAllLeaves((leaf) => {
-					if (this.overlays.has(leaf)) {
-						this.overlays.get(leaf)?.updateReadableLineLength();
-					}
-				});
-			}),
-		);
+		const refreshAppearance = () => {
+			this.app.workspace.iterateAllLeaves((leaf) => {
+				this.overlays.get(leaf)?.updateAppearance();
+			});
+		};
+
+		this.registerEvent(this.app.workspace.on("css-change", refreshAppearance));
+
+		// Appearance settings that aren't CSS — "Show inline title", "Readable
+		// line length" — don't raise css-change. The vault's internal
+		// `config-changed` event is what fires for those, so the overlay follows
+		// the setting immediately instead of only after a reload.
+		const vaultEvents = this.app.vault as Vault & {
+			on(name: "config-changed", callback: () => void): EventRef;
+		};
+		this.registerEvent(vaultEvents.on("config-changed", refreshAppearance));
 	}
 
 	// Redirect Obsidian's built-in find / find-and-replace commands into our
@@ -391,6 +399,7 @@ export default class RichTextPlugin extends Plugin {
 			if (!isShowing) {
 				overlay?.update();
 			}
+			overlay?.updateAppearance();
 			overlay?.toggleScope(true);
 		} else {
 			container.removeClass("is-rich-text-mode");

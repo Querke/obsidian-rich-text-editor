@@ -14,6 +14,22 @@
 	padding-bottom: 13px;
 }
 
+/* Mirrors Obsidian's "Show inline title" appearance setting. The bar itself
+   stays — on mobile its padding is what keeps the content clear of the app
+   header — only the title input and the desktop spacing go. */
+.rich-text-overlay.is-inline-title-hidden .custom-title-input {
+	display: none;
+}
+
+.rich-text-overlay.is-inline-title-hidden .custom-titlebar {
+	padding-top: 0;
+	padding-bottom: 0;
+}
+
+.rich-text-overlay.is-inline-title-hidden.is-mobile .custom-titlebar {
+	padding-top: 132px;
+}
+
 /* ---------------------------------------------------------------------------- */
 
 /* 1. Hide Standard Obsidian Editors when mode is active */
