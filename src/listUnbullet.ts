@@ -2,7 +2,9 @@
 // whole top-level list to paragraphs, no matter how little is selected — so
 // unbulleting one line strips the bullet from every item. This override converts
 // only the list items the selection actually covers, leaving every other item
-// (and its nesting) bulleted.
+// (and its nesting) bulleted, and drops the resulting paragraph where the item
+// was: the list is split around it instead of the paragraph being appended after
+// the list.
 
 import {
 	createRootEditorSubscription$,
@@ -16,6 +18,7 @@ import {
 	type LexicalNode,
 } from "lexical";
 import {
+	$createListItemNode,
 	$createListNode,
 	$isListItemNode,
 	$isListNode,
@@ -78,41 +81,59 @@ function $collectSelectedContentItems(
 	return [...found.values()];
 }
 
-// `cursors` tracks, per top-level list, where the next lifted nested paragraph
-// goes, so multiple lifted items keep their order.
-function $unbulletItem(
-	li: ListItemNode,
-	cursors: Map<string, LexicalNode>,
-): void {
+function $unbulletItem(li: ListItemNode): void {
 	const list = li.getParent();
 	if (!$isListNode(list)) return;
 
+	// A content item can still own a nested list (the items indented under it);
+	// that sublist must stay a list, so it seeds the trailing structure instead
+	// of being folded into the paragraph.
 	const paragraph = $createParagraphNode();
-	li.getChildren().forEach((child) => paragraph.append(child));
+	let carry: ListNode | null = null;
+	for (const child of li.getChildren()) {
+		if ($isListNode(child)) {
+			carry = child;
+		} else {
+			paragraph.append(child);
+		}
+	}
+
+	// Walk from the item up to the top-level list, rebuilding everything that
+	// comes *after* it at each level into `carry` — the list that goes below the
+	// paragraph. What stays behind is everything before it.
+	const top = topListOf(list);
+	let node: LexicalNode = li;
+	let level: ListNode = list;
+	for (;;) {
+		const after = node.getNextSiblings();
+		if (carry || after.length > 0) {
+			const trailing = $createListNode(
+				level.getListType(),
+				level.getStart(),
+			);
+			if (carry) {
+				const wrapper = $createListItemNode();
+				wrapper.append(carry);
+				trailing.append(wrapper);
+			}
+			after.forEach((sibling) => trailing.append(sibling));
+			carry = trailing;
+		}
+		if (level === top) break;
+		const wrapperItem = level.getParent();
+		if (!$isListItemNode(wrapperItem)) break;
+		const parentList = wrapperItem.getParent();
+		if (!$isListNode(parentList)) break;
+		node = wrapperItem;
+		level = parentList;
+	}
 
 	// Splice the paragraph in *before* detaching the item: removing the last
 	// item takes the list with it, and inserting relative to a detached node
 	// throws.
-	const outer = list.getParent();
-	if ($isListNode(outer) || $isListItemNode(outer)) {
-		const top = topListOf(list);
-		const cursor = cursors.get(top.getKey()) ?? top;
-		cursor.insertAfter(paragraph);
-		cursors.set(top.getKey(), paragraph);
-		li.remove();
-		pruneEmptyLists(list);
-		pruneEmptyLists(outer);
-		return;
-	}
-
-	const after = li.getNextSiblings();
-	list.insertAfter(paragraph);
+	top.insertAfter(paragraph);
+	if (carry) paragraph.insertAfter(carry);
 	li.remove();
-	if (after.length > 0) {
-		const trailing = $createListNode(list.getListType(), list.getStart());
-		after.forEach((node) => trailing.append(node));
-		paragraph.insertAfter(trailing);
-	}
 	pruneEmptyLists(list);
 }
 
@@ -128,10 +149,9 @@ export const listUnbulletPlugin = realmPlugin({
 						selection.getNodes(),
 					);
 					if (items.length === 0) return false;
-					const cursors = new Map<string, LexicalNode>();
 					for (const li of items) {
 						// An earlier item may have collapsed this one's list.
-						if (li.isAttached()) $unbulletItem(li, cursors);
+						if (li.isAttached()) $unbulletItem(li);
 					}
 					return true;
 				},
