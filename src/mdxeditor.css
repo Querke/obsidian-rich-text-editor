@@ -491,6 +491,7 @@ mark {
 	button._selectTrigger_1e2ox_308 {
 	min-width: var(--spacing-24);
 	font-size: var(--font-ui-smaller);
+	border: 1px solid var(--background-modifier-border);
 }
 
 ._toolbarRoot_1e2ox_162
@@ -499,7 +500,7 @@ mark {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	height: 100%;
+	height: 24.5px;
 	width: 100%;
 	color: currentColor;
 }
@@ -630,6 +631,18 @@ mark {
 	margin-left: auto;
 	display: flex;
 	align-items: center;
+}
+
+/* The caret is a full 24px icon box for a ~5px glyph; at the toolbar's smaller
+   trigger font that reads as a big off-centre blob, so shrink it and keep it
+   out of the icon scale-up above. */
+.mdxeditor
+	.mdxeditor-toolbar._toolbarRoot_1e2ox_162
+	._selectDropdownArrow_1e2ox_374
+	svg {
+	width: var(--spacing-4);
+	height: var(--spacing-4);
+	transform: none;
 }
 
 ._contentEditable_1e2ox_380 {
@@ -1055,7 +1068,7 @@ mark {
 
 ._tooltipTrigger_1e2ox_677 {
 	align-self: center;
-	height: 100%;
+	height: 24.5px;
 }
 
 ._tooltipContent_1e2ox_681 {
