@@ -56,6 +56,45 @@ function EditorDock() {
 		return () => observer.disconnect();
 	}, []);
 
+	// Opening or closing a bar changes the dock's height, which moves the text
+	// below it — jarring on its own, and it also drags whatever is under the
+	// pointer out from under a right-press. The document can't move if the
+	// scroller absorbs the difference, so match every height change with an
+	// equal scroll. Runs in the ResizeObserver callback, which fires before
+	// paint, so the two never appear out of step.
+	//
+	// Mobile is exempt: there the dock is fixed above the keyboard and takes no
+	// space in flow, so nothing shifts to begin with. And a document shorter
+	// than its viewport has no scroll range to spend — that one still shifts.
+	useEffect(() => {
+		const dock = dockRef.current;
+		if (!dock || dock.closest(".rich-text-overlay.is-mobile")) return;
+
+		const editor = dock.closest<HTMLElement>(".mdxeditor");
+		if (!editor) return;
+
+		// Resolved per change, not once: which of the two elements carries the
+		// overflow depends on the note being long enough to scroll at all.
+		// Assigning past either end is clamped by the browser, so a document
+		// with only part of the room to give absorbs what it can.
+		let height = dock.getBoundingClientRect().height;
+		const observer = new ResizeObserver(() => {
+			const next = dock.getBoundingClientRect().height;
+			const delta = next - height;
+			height = next;
+			if (delta === 0) return;
+			const scroller = [
+				editor.querySelector<HTMLElement>(
+					".mdxeditor-root-contenteditable",
+				),
+				editor,
+			].find((el) => el && el.scrollHeight > el.clientHeight);
+			if (scroller) scroller.scrollTop += delta;
+		});
+		observer.observe(dock);
+		return () => observer.disconnect();
+	}, []);
+
 	// Obsidian resizes the layout viewport when the keyboard opens (so
 	// visualViewport can't detect it), but the editor's :focus-within state is a
 	// reliable proxy: focus in the editor means the keyboard is up and the
