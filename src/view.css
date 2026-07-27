@@ -489,3 +489,10 @@ blockquote {
 .rich-text-overlay.is-mobile .rich-text-docked-bar .clickable-icon {
 	padding: 8px;
 }
+
+/* The import-failure Notice's copy button (see showImportError). Notices live
+   outside our overlay, so this can't hang off .rich-text-overlay. */
+.rich-text-notice-button {
+	margin-top: var(--size-4-2);
+	cursor: pointer;
+}

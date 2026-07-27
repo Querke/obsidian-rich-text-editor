@@ -806,6 +806,9 @@ export class RichTextOverlay {
 						}}
 						// Simple rename handler
 						onRename={handleRename}
+						onError={(error, source) =>
+							this.showImportError(error, source)
+						}
 						onImageUpload={(file) => this.handleImageUpload(file)}
 						onResolveImage={this.resolveImagePath}
 						onPickInternalLink={this.pickInternalLink}
@@ -952,6 +955,40 @@ export class RichTextOverlay {
 
 		// 6. Decode URI component in case generateMarkdownLink encoded spaces
 		return decodeURI(cleanPath);
+	}
+
+	// The import failed, so the editor is blank and the reason is only useful if
+	// it can leave the machine. A Notice can't be selected — clicking one
+	// dismisses it — so it carries a button that puts the whole report on the
+	// clipboard, ready to paste into a bug report.
+	private showImportError(error: string, source: string) {
+		const report =
+			"ERROR rich text editor: markdown import failed\n" +
+			(this.view.file?.path ?? "(no file)") +
+			"\n" +
+			error +
+			"\n\n" +
+			source;
+		console.error("RichTextOverlay: Markdown import failed", error, source);
+
+		const message = new DocumentFragment();
+		message.createDiv({
+			text:
+				"ERROR rich text editor: could not parse this note (" +
+				error +
+				").",
+		});
+		const button = message.createEl("button", {
+			text: "Copy details",
+			cls: "rich-text-notice-button",
+		});
+		button.addEventListener("click", (e) => {
+			e.stopPropagation();
+			void navigator.clipboard.writeText(report).then(() => {
+				button.setText("Copied");
+			});
+		});
+		new Notice(message, 30000);
 	}
 
 	private showLinkContextMenu(

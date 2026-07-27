@@ -339,6 +339,9 @@ interface Props {
 	// Returns true if a note/file with this linkpath exists in the vault.
 	onResolveLink: (linkpath: string) => boolean;
 	onPickInternalLink: () => Promise<string | null>;
+	// The markdown importer failed — the editor is left blank, so the host
+	// surfaces this instead of the note silently rendering as nothing.
+	onError: (error: string, source: string) => void;
 	getInternalLinkSuggestions: (query: string) => WikilinkSuggestion[];
 	onRenderEmbed?: EmbedRenderer;
 }
@@ -1564,6 +1567,9 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 					ref={editorRef}
 					markdown={props.text}
 					onChange={handleContentChange}
+					onError={(payload: { error: string; source: string }) =>
+						props.onError(payload.error, payload.source)
+					}
 					contentEditableClassName="mxeditor-content-editable"
 					suppressHtmlProcessing={false}
 					toMarkdownOptions={{ listItemIndent: "tab" }}
