@@ -25,14 +25,16 @@ import {
 import { Cell, Signal, useCellValues, usePublisher } from "@mdxeditor/gurx";
 import { $isLinkNode } from "@lexical/link";
 import type { LinkNode } from "@lexical/link";
-import { mergeRegister } from "@lexical/utils";
+import { $findMatchingParent, mergeRegister } from "@lexical/utils";
 import {
+	$getNearestNodeFromDOMNode,
 	$getNodeByKey,
 	$getSelection,
 	$isElementNode,
 	$isRangeSelection,
 	$isTextNode,
 	COMMAND_PRIORITY_CRITICAL,
+	createCommand,
 	KEY_ESCAPE_COMMAND,
 } from "lexical";
 import { useEffect, useRef, useState } from "react";
@@ -45,6 +47,12 @@ export type OpenLinkHandler = (
 ) => void;
 
 const openLink$ = Cell<OpenLinkHandler | null>(null);
+
+// Opens the bar's edit form for a rendered <a> — the right-click menu's
+// "Edit link", which has an anchor element rather than a caret to work from.
+export const OPEN_LINK_EDIT_COMMAND = createCommand<HTMLAnchorElement>(
+	"OPEN_LINK_EDIT_COMMAND",
+);
 
 // Raised by Close; Escape is caught as a command instead.
 const dismissLink$ = Signal<true>();
@@ -368,6 +376,34 @@ export const linkDialogBarPlugin = realmPlugin<{
 					adjacent = next;
 					queueMicrotask(openIfAdjacent);
 				}),
+				// Same two steps as the bar's own Edit button: put the caret at
+				// the end of the link so MDXEditor derives a preview for it, then
+				// switch that preview to the edit form once the derivation has
+				// run. Falls back to the preview bar if it hasn't.
+				editor.registerCommand(
+					OPEN_LINK_EDIT_COMMAND,
+					(anchorEl) => {
+						const node = $getNearestNodeFromDOMNode(anchorEl);
+						if (!node) return false;
+						const link = $isLinkNode(node)
+							? node
+							: $findMatchingParent(node, $isLinkNode);
+						if (!$isLinkNode(link)) return false;
+						const last = link.getLastDescendant();
+						if ($isTextNode(last)) {
+							const end = last.getTextContentSize();
+							last.select(end, end);
+						} else {
+							link.select(0, link.getChildrenSize());
+						}
+						dismissedKey = null;
+						queueMicrotask(() =>
+							realm.pub(switchFromPreviewToLinkEdit$, undefined),
+						);
+						return true;
+					},
+					COMMAND_PRIORITY_CRITICAL,
+				),
 				editor.registerCommand(
 					KEY_ESCAPE_COMMAND,
 					() => {

@@ -12,6 +12,7 @@ import {
 import { StrictMode } from "react";
 import { createRoot, Root } from "react-dom/client";
 import {
+	LinkTarget,
 	resolveCodeLang,
 	RichTextEditor,
 	RichTextEditorRef,
@@ -831,8 +832,13 @@ export class RichTextOverlay {
 								where === "current" ? false : where,
 							);
 						}}
-						onLinkContextMenu={(linkpath, clientX, clientY) =>
-							this.showLinkContextMenu(linkpath, clientX, clientY)
+						onLinkContextMenu={(link, clientX, clientY, editLink) =>
+							this.showLinkContextMenu(
+								link,
+								clientX,
+								clientY,
+								editLink,
+							)
 						}
 						onResolveLink={(linkpath) =>
 							this.view.app.metadataCache.getFirstLinkpathDest(
@@ -942,17 +948,68 @@ export class RichTextOverlay {
 	}
 
 	private showLinkContextMenu(
-		linkpath: string,
+		link: LinkTarget,
 		clientX: number,
 		clientY: number,
+		editLink: () => void,
 	) {
 		const menu = new Menu();
-		this.view.app.workspace.handleLinkContextMenu(
-			menu,
-			linkpath,
-			this.view.file?.path || "",
-			this.view.leaf,
-		);
+		const addEditItem = () =>
+			menu.addItem((item) =>
+				item
+					.setTitle("Edit link")
+					.setIcon("pencil")
+					.onClick(() => editLink()),
+			);
+
+		if (link.kind === "internal") {
+			this.view.app.workspace.handleLinkContextMenu(
+				menu,
+				link.path,
+				this.view.file?.path || "",
+				this.view.leaf,
+			);
+			menu.addSeparator();
+			addEditItem();
+		} else {
+			// External URLs and tag links get no menu from Obsidian's link
+			// handler (it only knows vault paths), and without one the browser's
+			// own menu shows up with nothing link-related in it.
+			const url =
+				link.kind === "external"
+					? link.href
+					: "obsidian://search?query=" +
+						encodeURIComponent(link.query);
+			const openLabel =
+				link.kind === "external"
+					? "Open link in default browser"
+					: "Search for tag";
+
+			menu.addItem((item) =>
+				item
+					.setTitle(openLabel)
+					.setIcon(link.kind === "external" ? "globe" : "hash")
+					.onClick(() =>
+						window.open(url, "_blank", "noopener,noreferrer"),
+					),
+			);
+			addEditItem();
+			menu.addItem((item) =>
+				item
+					.setTitle(
+						link.kind === "external" ? "Copy URL" : "Copy tag",
+					)
+					.setIcon("copy")
+					.onClick(() => {
+						void navigator.clipboard.writeText(
+							link.kind === "external"
+								? link.href
+								: link.query.replace(/^tag:/, ""),
+						);
+					}),
+			);
+		}
+
 		menu.showAtPosition({ x: clientX, y: clientY });
 	}
 

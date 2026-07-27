@@ -87,7 +87,10 @@ import {
 } from "./wikilinkShortcutPlugin";
 import { searchBarPlugin } from "./SearchBar";
 import { editorDockPlugin } from "./editorDock";
-import { linkDialogBarPlugin } from "./linkDialogBar";
+import {
+	linkDialogBarPlugin,
+	OPEN_LINK_EDIT_COMMAND,
+} from "./linkDialogBar";
 import {
 	EmbedRenderer,
 	isEmbeddedLang,
@@ -311,6 +314,13 @@ function patchCodeLanguages() {
 
 patchCodeLanguages();
 
+// Classify a rendered <a> so left-click, middle-click and the right-click menu
+// all agree on internal-vs-external.
+export type LinkTarget =
+	| { kind: "internal"; path: string }
+	| { kind: "external"; href: string }
+	| { kind: "tagSearch"; query: string };
+
 interface Props {
 	title: string;
 	text: string;
@@ -321,9 +331,10 @@ interface Props {
 	onResolveImage: (src: string) => string;
 	onNavigate: (path: string, where: "current" | "tab" | "window") => void;
 	onLinkContextMenu: (
-		linkpath: string,
+		link: LinkTarget,
 		clientX: number,
 		clientY: number,
+		editLink: () => void,
 	) => void;
 	// Returns true if a note/file with this linkpath exists in the vault.
 	onResolveLink: (linkpath: string) => boolean;
@@ -1326,13 +1337,6 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 			props.onSave(newMarkdown);
 		};
 
-		// Classify a rendered <a> so left-click, middle-click and the
-		// right-click menu all agree on internal-vs-external.
-		type LinkTarget =
-			| { kind: "internal"; path: string }
-			| { kind: "external"; href: string }
-			| { kind: "tagSearch"; query: string };
-
 		const resolveLinkTarget = (
 			anchor: HTMLAnchorElement,
 		): LinkTarget | null => {
@@ -1431,14 +1435,33 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 			openLinkTarget(anchor, where);
 		};
 
+		// The link under the last right-press. Pressing the button moves the
+		// caret, which opens the link bar, which pushes the document down — so by
+		// the time `contextmenu` fires, the pointer is over whatever slid under
+		// it and the anchor is no longer at the event's coordinates. Reading it
+		// at mousedown, before any of that, is what keeps the two in sync.
+		const pressedAnchor = useRef<HTMLAnchorElement | null>(null);
+
 		const handleEditorContextMenu = (e: ReactMouseEvent) => {
-			const anchor = (e.target as HTMLElement).closest("a");
+			const pressed = pressedAnchor.current;
+			const anchor =
+				(e.target as HTMLElement).closest("a") ??
+				(pressed?.isConnected ? pressed : null);
 			if (!anchor) return;
 			const link = resolveLinkTarget(anchor);
-			if (!link || link.kind !== "internal") return;
+			if (!link) return;
 			e.preventDefault();
 			e.stopPropagation();
-			props.onLinkContextMenu(link.path, e.clientX, e.clientY);
+			props.onLinkContextMenu(link, e.clientX, e.clientY, () => {
+				hostRef.current
+					?.querySelector<LexicalContentEditable>(
+						".mxeditor-content-editable",
+					)
+					?.__lexicalEditor?.dispatchCommand(
+						OPEN_LINK_EDIT_COMMAND,
+						anchor,
+					);
+			});
 		};
 
 		const TitleBar = () => {
@@ -1509,6 +1532,12 @@ export const RichTextEditor = forwardRef<RichTextEditorRef, Props>(
 				ref={hostRef}
 				className="react-root"
 				onMouseDownCapture={(e) => {
+					if (e.button === 2) {
+						pressedAnchor.current = (
+							e.target as HTMLElement
+						).closest("a");
+						return;
+					}
 					// Middle-click navigates on the follow-up auxclick; this
 					// only suppresses the autoscroll puck.
 					if (e.button === 1) {
